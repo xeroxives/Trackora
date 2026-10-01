@@ -110,14 +110,17 @@ namespace WpfApp14.Services
         {
             try
             {
-                // Получаем актуальный экземпляр сервиса через статическое поле
                 var service = _instance;
 
                 if (service != null && service._streamHandle == handle)
                 {
                     service._isPlayingInternal = false;
-                    Logger.Log("Track ended naturally (via Callback).");
+                    Logger.Log("[BASS] Track ended callback fired.");
                     service.TrackEnded?.Invoke();
+                }
+                else
+                {
+                    Logger.Log($"[BASS] Callback fired but handle mismatch. Callback: {handle}, Current: {service?._streamHandle}");
                 }
             }
             catch (Exception ex)

@@ -38,6 +38,7 @@ namespace WpfApp14.ViewModels
 
                     _lastKnownPosition = 0;
                     _currentPositionSeconds = 0;
+                    _trackEndHandled = false;
                     Notify(nameof(CurrentPositionSeconds));
 
                     if (!string.IsNullOrEmpty(value.FilePathOrUri))
@@ -86,6 +87,24 @@ namespace WpfApp14.ViewModels
             get => _totalDurationSeconds;
             set { _totalDurationSeconds = value; Notify(nameof(TotalDurationSeconds)); }
         }
+        public PlaybackMode CurrentPlaybackMode
+        {
+            get => _playbackMode;
+            set
+            {
+                _playbackMode = value;
+                Notify(nameof(CurrentPlaybackMode));
+                Notify(nameof(IsLoopActive));
+                Notify(nameof(IsShuffleActive));
+
+                string modeName = value == PlaybackMode.Loop ? "Loop" : value == PlaybackMode.Shuffle ? "Shuffle" : "Normal";
+                StatusText = $"Playback mode: {modeName}";
+                Logger.Log($"[MODE] Changed to: {modeName}");
+            }
+        }
+
+        public bool IsLoopActive => _playbackMode == PlaybackMode.Loop;
+        public bool IsShuffleActive => _playbackMode == PlaybackMode.Shuffle;
         #endregion
 
         #region Privates
@@ -95,12 +114,15 @@ namespace WpfApp14.ViewModels
         private readonly string _appDataFolder;
         private bool _isSeeking = false;
         private bool _isUserSeeking = false;
+        private bool _isUserSeekingFlag = false;
         private double _lastKnownPosition = 0;
+        private PlaybackMode _playbackMode = PlaybackMode.Normal;
+        private Random _random = new Random();
         private int _tickCounter = 0;
+        private bool _trackEndHandled = false;
         #endregion
 
         #region I_Command
-        public ICommand LoadTestDataCommand { get; }
         public ICommand PlayPauseCommand { get; }
         public ICommand OpenFileCommand { get; }
         public ICommand SaveToAppDataCommand { get; }
@@ -108,6 +130,8 @@ namespace WpfApp14.ViewModels
         public ICommand OpenFileLocationCommand { get; }
         public ICommand EditMetadataCommand { get; }
         public ICommand AddToQueueCommand { get; }
+        public ICommand ToggleLoopCommand { get; }
+        public ICommand ToggleShuffleCommand { get; }
         #endregion
 
         #region Funcs_Timer
@@ -120,6 +144,7 @@ namespace WpfApp14.ViewModels
             Notify(nameof(CurrentPositionSeconds));
 
             _tickCounter = 0;
+            _trackEndHandled = false;
 
             if (!_progressTimer.IsEnabled)
                 _progressTimer.Start();
@@ -134,14 +159,13 @@ namespace WpfApp14.ViewModels
             if (_progressTimer.IsEnabled)
                 _progressTimer.Stop();
         }
-
         private void ProgressTimer_Tick(object sender, EventArgs e)
         {
             _tickCounter++;
 
             if (_isPlaying && _audioService.IsPlaying)
             {
-                if (_isUserSeeking)
+                if (_isUserSeekingFlag)
                 {
                     Logger.Log($"[TICK #{_tickCounter}] SKIPPED — user is seeking.");
                     return;
@@ -151,7 +175,7 @@ namespace WpfApp14.ViewModels
 
                 if (_tickCounter % 30 == 0)
                 {
-                    Logger.Log($"[TICK #{_tickCounter}] BASS pos: {pos:F2}s, LastKnown: {_lastKnownPosition:F2}s, CurrentUI: {_currentPositionSeconds:F2}s");
+                    Logger.Log($"[TICK #{_tickCounter}] BASS pos: {pos:F2}s, LastKnown: {_lastKnownPosition:F2}s, CurrentUI: {_currentPositionSeconds:F2}s, Duration: {_totalDurationSeconds:F2}s");
                 }
 
                 if (!double.IsNaN(pos) && !double.IsInfinity(pos) && pos >= 0)
@@ -160,15 +184,19 @@ namespace WpfApp14.ViewModels
                     _currentPositionSeconds = pos;
                     Notify(nameof(CurrentPositionSeconds));
                 }
+
+                if (_totalDurationSeconds > 0 && pos >= _totalDurationSeconds - 0.15 && !_trackEndHandled)
+                {
+                    _trackEndHandled = true;
+                    Logger.Log($"[TICK #{_tickCounter}] Track end detected via timer fallback.");
+                    _isPlaying = false;
+                    StopProgressTimer();
+                    OnTrackEnded();
+                }
             }
             else if (!_isPlaying)
             {
-                Logger.Log($"[TICK #{_tickCounter}] STOPPED — _isPlaying is false.");
                 StopProgressTimer();
-            }
-            else
-            {
-                Logger.Log($"[TICK #{_tickCounter}] SKIPPED — _isPlaying={_isPlaying}, BASS.IsPlaying={_audioService.IsPlaying}");
             }
         }
         #endregion
@@ -190,6 +218,12 @@ namespace WpfApp14.ViewModels
         public void Cleanup()
         {
             _audioService?.Dispose();
+        }
+        public enum PlaybackMode
+        {
+            Normal,
+            Loop,
+            Shuffle
         }
         #endregion
 
@@ -576,34 +610,85 @@ namespace WpfApp14.ViewModels
                 Logger.Error($"Failed to load from AppData: {ex.Message}");
             }
         }
-        #endregion
-
-        #region Test
-        private void LoadTestData()
+        private void ToggleLoop(object param)
         {
-            Logger.Log("Loading test data...");
-            //Songs.Clear();
-            Songs.Add(new Song { Id = 9991, Title = "Rumbling Hearts", ArtistId = 1, Genre = "Anime", DurationSeconds = 285, BitrateKbps = 320, IsSavedToAppData = false });
-            Songs.Add(new Song { Id = 9992, Title = "Harder, Better...", ArtistId = 2, Genre = "House", DurationSeconds = 229, BitrateKbps = 256, Bpm = 123, IsSavedToAppData = false });
-            StatusText = $"Loaded {Songs.Count} tracks.";
-            Logger.Log($"Test data loaded successfully. Count: {Songs.Count}");
+            if (_playbackMode == PlaybackMode.Loop)
+                CurrentPlaybackMode = PlaybackMode.Normal;
+            else
+                CurrentPlaybackMode = PlaybackMode.Loop;
+        }
+        private void ToggleShuffle(object param)
+        {
+            if (_playbackMode == PlaybackMode.Shuffle)
+                CurrentPlaybackMode = PlaybackMode.Normal;
+            else
+                CurrentPlaybackMode = PlaybackMode.Shuffle;
+        }
+        private void OnTrackEnded()
+        {
+            if (Songs == null || Songs.Count == 0)
+            {
+                StatusText = "Finished";
+                Notify(nameof(StatusText));
+                return;
+            }
+
+            switch (_playbackMode)
+            {
+                case PlaybackMode.Loop:
+                    PlayNextTrack();
+                    break;
+
+                case PlaybackMode.Shuffle:
+                    PlayRandomTrack();
+                    break;
+
+                default:
+                    StatusText = "Finished";
+                    Notify(nameof(StatusText));
+                    break;
+            }
+        }
+        private void PlayNextTrack()
+        {
+            int currentIndex = Songs.IndexOf(SelectedSong);
+            int nextIndex = (currentIndex + 1) % Songs.Count;
+
+            Logger.Log($"[LOOP] Playing next track: index {nextIndex}");
+            SelectedSong = Songs[nextIndex];
+        }
+        private void PlayRandomTrack()
+        {
+            if (Songs.Count <= 1)
+            {
+                SelectedSong = Songs[0];
+                return;
+            }
+
+            int currentIndex = Songs.IndexOf(SelectedSong);
+            int randomIndex;
+
+            do
+            {
+                randomIndex = _random.Next(Songs.Count);
+            } while (randomIndex == currentIndex);
+
+            Logger.Log($"[SHUFFLE] Playing random track: index {randomIndex}");
+            SelectedSong = Songs[randomIndex];
         }
         #endregion
 
         #region Constructor
         public MainVM()
         {
-            // Инициализация путей AppData
             _appDataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Trackora");
             if (!Directory.Exists(_appDataFolder))
                 Directory.CreateDirectory(_appDataFolder);
 
-            // Существующие команды
-            LoadTestDataCommand = new ButtonCommand(LoadTestData);
             PlayPauseCommand = new ButtonCommand(TogglePlayPause);
             OpenFileCommand = new ButtonCommand(OpenFileDialog);
-
-            // Новые команды (передаем Song как параметр)
+            ToggleLoopCommand = new ButtonCommand(ToggleLoop);
+            ToggleShuffleCommand = new ButtonCommand(ToggleShuffle);
             SaveToAppDataCommand = new ButtonCommand(SaveToAppData);
             RemoveFromSessionCommand = new ButtonCommand(RemoveFromSession);
             OpenFileLocationCommand = new ButtonCommand(OpenFileLocation);
@@ -618,11 +703,14 @@ namespace WpfApp14.ViewModels
             {
                 System.Windows.Application.Current.Dispatcher.Invoke(() =>
                 {
-                    _isPlaying = false;
-                    StatusText = "Finished";
-                    StopProgressTimer();
-                    Notify(nameof(StatusText));
-                    Notify(nameof(SelectedSong));
+                    Logger.Log("[BASS] TrackEnded event received in VM.");
+                    if (!_trackEndHandled)
+                    {
+                        _trackEndHandled = true;
+                        _isPlaying = false;
+                        StopProgressTimer();
+                        OnTrackEnded();
+                    }
                 });
             };
 
@@ -639,6 +727,7 @@ namespace WpfApp14.ViewModels
                     }
                 });
             };
+
             LoadFromAppData();
             Logger.Log("MainVM initialized with AudioService and Timer.");
         }

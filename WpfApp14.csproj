@@ -108,6 +108,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Converters\BoolToColorConverter.cs" />
     <Compile Include="Converters\BoolToSaveTextConverter.cs" />
     <Compile Include="Converters\PercentWidthConverter.cs" />
     <Compile Include="Converters\ProgressWidthConverter.cs" />
