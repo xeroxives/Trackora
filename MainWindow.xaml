@@ -3,83 +3,227 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:converters="clr-namespace:WpfApp14.Converters"
         xmlns:viewmodels="clr-namespace:WpfApp14.ViewModels"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         Title="Trackora Audio Player" 
-        Height="600" Width="900"
-        MinHeight="400" MinWidth="700"
-        Background="#1E1E1E">
+        Height="650" Width="950"
+        MinHeight="500" MinWidth="750"
+        Background="#121212">
+
     <Window.DataContext>
         <viewmodels:MainVM/>
     </Window.DataContext>
+
     <Window.Resources>
-        <!-- Конвертер времени из мануала -->
+        <!-- Конвертеры -->
         <converters:TimeConverter x:Key="TimeConv"/>
         <converters:StringToImageConverter x:Key="StrImgConv"/>
-        <converters:PercentWidthConverter x:Key="PercentWidthConverter"/>
+        <!--<converters:PercentWidthConverter x:Key="PercentWidthConverter"/>-->
+        <converters:ProgressWidthConverter x:Key="ProgressWidthConv"/>
+        <converters:BoolToSaveTextConverter x:Key="BoolToSaveTextConverter"/>
         <!-- Стиль для кнопок управления -->
         <Style TargetType="Button" x:Key="ControlButtonStyle">
-            <Setter Property="Background" Value="#333333"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="FontSize" Value="16"/>
-            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#B3B3B3"/>
+            <Setter Property="FontSize" Value="20"/>
+            <Setter Property="Padding" Value="10"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#505050"/>
+                    <Setter Property="Foreground" Value="White"/>
                 </Trigger>
             </Style.Triggers>
+        </Style>
+
+        <!-- Стиль для главного Play/Pause -->
+        <Style TargetType="Button" x:Key="PlayButtonStyle" BasedOn="{StaticResource ControlButtonStyle}">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="Foreground" Value="Black"/>
+            <Setter Property="FontSize" Value="24"/>
+            <Setter Property="Width" Value="48"/>
+            <Setter Property="Height" Value="48"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="24" 
+                                Width="{TemplateBinding Width}" 
+                                Height="{TemplateBinding Height}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#E0E0E0"/>
+                                <Setter Property="Cursor" Value="Hand"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="Slider" x:Key="ProgressSliderStyle">
+            <Setter Property="Minimum" Value="0"/>
+            <Setter Property="Maximum" Value="{Binding TotalDurationSeconds, FallbackValue=100}"/>
+            <Setter Property="Value" Value="{Binding CurrentPositionSeconds, Mode=OneWay}"/>
+            <Setter Property="Background" Value="#4D4D4D"/>
+            <Setter Property="Foreground" Value="#1DB954"/>
+            <Setter Property="Height" Value="12"/>
+            <Setter Property="IsMoveToPointEnabled" Value="True"/>
+            <Setter Property="AutoToolTipPlacement" Value="None"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Slider">
+                        <Grid x:Name="RootGrid" Background="Transparent">
+
+                            <Border x:Name="TrackBackground" 
+                            Background="{TemplateBinding Background}" 
+                            Height="4" 
+                            CornerRadius="2" 
+                            VerticalAlignment="Center"/>
+
+                            <Track x:Name="PART_Track" VerticalAlignment="Center">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="Slider.DecreaseLarge">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Slider}}" 
+                                                Height="4" 
+                                                CornerRadius="2"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="Slider.IncreaseLarge">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Background="Transparent" Height="12"/>
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb x:Name="Thumb" Width="12" Height="12" Opacity="0" Cursor="Hand">
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Ellipse Fill="White" Width="12" Height="12" StrokeThickness="0">
+                                                    <Ellipse.Effect>
+                                                        <DropShadowEffect BlurRadius="4" ShadowDepth="1" Opacity="0.4"/>
+                                                    </Ellipse.Effect>
+                                                </Ellipse>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                            </Track>
+
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Thumb" Property="Opacity" Value="1"/>
+                                <Setter Property="Foreground" Value="#1ED760"/>
+                            </Trigger>
+                            <Trigger SourceName="Thumb" Property="IsDragging" Value="True">
+                                <Setter TargetName="Thumb" Property="Opacity" Value="1"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </Window.Resources>
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="300"/>
-            <!-- Плейлист -->
+            <ColumnDefinition Width="320"/>
             <ColumnDefinition Width="*"/>
-            <!-- Основная зона -->
         </Grid.ColumnDefinitions>
 
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
-            <!-- Контент -->
             <RowDefinition Height="Auto"/>
-            <!-- Футер управления -->
         </Grid.RowDefinitions>
 
         <!-- ================= ЛЕВАЯ ПАНЕЛЬ: ПЛЕЙЛИСТ ================= -->
-        <DockPanel Grid.Column="0" Grid.RowSpan="2" Background="#252525">
-            <!-- Панель инструментов импорта -->
-            <StackPanel DockPanel.Dock="Top" Margin="10">
-                <TextBlock Text="Библиотека" Foreground="White" FontSize="20" FontWeight="Bold" Margin="0,0,0,10"/>
-                <Button Content="📂 Импорт файлов" 
+        <DockPanel Grid.Column="0" Grid.RowSpan="2" Background="#000000">
+            <StackPanel DockPanel.Dock="Top" Margin="20,20,20,10">
+                <TextBlock Text="Trackora" Foreground="White" FontSize="22" FontWeight="Bold" Margin="0,0,0,15"/>
+                <Button Content="📂  Импорт файлов" 
                         Command="{Binding OpenFileCommand}" 
                         Style="{StaticResource ControlButtonStyle}" 
+                        HorizontalAlignment="Left"
+                        FontSize="14"
                         Margin="0,0,0,5"/>
-                <Button Content="🧪 Тестовые данные" 
+                <Button Content="🧪  Тестовые данные" 
                         Command="{Binding LoadTestDataCommand}" 
                         Style="{StaticResource ControlButtonStyle}" 
-                        FontSize="12" Padding="10,5"/>
+                        HorizontalAlignment="Left"
+                        FontSize="12"/>
             </StackPanel>
 
-            <!-- Список треков -->
             <ListBox ItemsSource="{Binding Songs}" 
-                     SelectedItem="{Binding SelectedSong, Mode=TwoWay}"
-                     Background="Transparent" 
-                     BorderThickness="0"
-                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+         SelectedItem="{Binding SelectedSong, Mode=TwoWay}"
+         Background="Transparent" 
+         BorderThickness="0"
+         Margin="0,10,0,0"
+         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+         Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=Window}}">
+
+                <ListBox.ContextMenu>
+                    <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
+
+                        <!-- Сохранить / Удалить из AppData -->
+                        <MenuItem Command="{Binding SaveToAppDataCommand}"
+                      CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                            <MenuItem.Style>
+                                <Style TargetType="MenuItem">
+                                    <Setter Property="Header" Value="💾 Сохранить в библиотеку"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding PlacementTarget.SelectedItem.IsSavedToAppData, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Value="True">
+                                            <Setter Property="Header" Value="❌ Удалить из библиотеки"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </MenuItem.Style>
+                        </MenuItem>
+
+                        <Separator/>
+
+                        <MenuItem Header="🗑️ Удалить из сессии" 
+                      Command="{Binding RemoveFromSessionCommand}"
+                      CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+
+                        <MenuItem Header="📂 Расположение файла" 
+                      Command="{Binding OpenFileLocationCommand}"
+                      CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+
+                        <Separator/>
+
+                        <MenuItem Header="✏️ Редактировать метаданные" 
+                      Command="{Binding EditMetadataCommand}"
+                      CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+
+                        <MenuItem Header="➕ Добавить в очередь" 
+                      Command="{Binding AddToQueueCommand}"
+                      CommandParameter="{Binding PlacementTarget.SelectedItem, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                    </ContextMenu>
+                </ListBox.ContextMenu>
+
+                <!-- ItemContainerStyle и ItemTemplate остаются без изменений -->
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem">
                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                        <Setter Property="Padding" Value="10,8"/>
-                        <Setter Property="Foreground" Value="#CCCCCC"/>
+                        <Setter Property="Padding" Value="15,10"/>
+                        <Setter Property="Foreground" Value="#B3B3B3"/>
+                        <Setter Property="Cursor" Value="Hand"/>
                         <Style.Triggers>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="#3A3A3A"/>
+                                <Setter Property="Background" Value="#282828"/>
                                 <Setter Property="Foreground" Value="White"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#2F2F2F"/>
+                                <Setter Property="Background" Value="#1A1A1A"/>
                             </Trigger>
                         </Style.Triggers>
                     </Style>
@@ -87,80 +231,83 @@
 
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <StackPanel>
-                            <TextBlock Text="{Binding Title}" 
-                                       FontWeight="SemiBold" 
-                                       TextTrimming="CharacterEllipsis"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                <TextBlock Text="{Binding Info}" 
-                                           FontSize="11" 
-                                           Opacity="0.7"
-                                           TextTrimming="CharacterEllipsis"/>
-                                <TextBlock Text=" • " FontSize="11" Opacity="0.7"/>
-                                <TextBlock Text="{Binding DurationSeconds, Converter={StaticResource TimeConv}}" 
-                                           FontSize="11" 
-                                           Opacity="0.7"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="20"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="▶" FontSize="10" Foreground="#1DB954" VerticalAlignment="Center">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
+                                    <TextBlock Text="{Binding Info}" FontSize="11" Opacity="0.6" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text=" • " FontSize="11" Opacity="0.6"/>
+                                    <TextBlock Text="{Binding DurationSeconds, Converter={StaticResource TimeConv}}" FontSize="11" Opacity="0.6"/>
+                                </StackPanel>
                             </StackPanel>
-                        </StackPanel>
+                        </Grid>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
         </DockPanel>
 
         <!-- ================= ПРАВАЯ ПАНЕЛЬ: ИНФО О ТРЕКЕ ================= -->
-        <Grid Grid.Column="1" Grid.Row="0" Margin="30">
+        <Grid Grid.Column="1" Grid.Row="0" Margin="40,20,40,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
-                <!-- Обложка -->
                 <RowDefinition Height="Auto"/>
-                <!-- Метаданные -->
                 <RowDefinition Height="*"/>
-                <!-- Статус / Пустое пространство -->
             </Grid.RowDefinitions>
 
-            <!-- Обложка альбома с безопасным плейсхолдером -->
             <Grid Grid.Row="0" 
-                  Width="250" Height="250" 
-                  Margin="0,20,0,20"
+                  Width="280" Height="280" 
+                  Margin="0,30,0,30"
                   HorizontalAlignment="Center">
                 <Grid.Effect>
-                    <DropShadowEffect BlurRadius="15" ShadowDepth="5" Opacity="0.5"/>
+                    <DropShadowEffect BlurRadius="20" ShadowDepth="8" Opacity="0.6" Color="Black"/>
                 </Grid.Effect>
 
-                <!-- 1. Плейсхолдер (виден всегда, лежит на дне) -->
-                <Border Background="#333333" CornerRadius="8">
+                <Border Background="#282828" CornerRadius="6">
                     <TextBlock Text="🎵" 
-                               FontSize="60" 
-                               Foreground="#555555" 
+                               FontSize="70" 
+                               Foreground="#404040" 
                                HorizontalAlignment="Center" 
                                VerticalAlignment="Center"/>
                 </Border>
 
                 <Image Stretch="UniformToFill" ClipToBounds="True"
                        Source="{Binding SelectedSong.BackgroundImagePath, Converter={StaticResource StrImgConv}}">
-
-                    <!-- Скругление углов -->
                     <Image.Clip>
-                        <RectangleGeometry Rect="0,0,250,250" RadiusX="8" RadiusY="8"/>
+                        <RectangleGeometry Rect="0,0,280,280" RadiusX="6" RadiusY="6"/>
                     </Image.Clip>
                 </Image>
             </Grid>
 
-            <!-- Текстовая информация -->
-            <StackPanel Grid.Row="1" HorizontalAlignment="Center" MaxWidth="400">
+            <StackPanel Grid.Row="1" HorizontalAlignment="Center" MaxWidth="450">
                 <TextBlock Text="{Binding SelectedSong.Title}" 
                            Foreground="White" 
-                           FontSize="24" 
+                           FontSize="28" 
                            FontWeight="Bold"
                            TextAlignment="Center"
                            TextWrapping="Wrap"/>
 
                 <TextBlock Text="{Binding SelectedSong.Title_Romanized}" 
-                           Foreground="#AAAAAA" 
-                           FontSize="14" 
+                           Foreground="#A0A0A0" 
+                           FontSize="15" 
                            FontStyle="Italic"
                            TextAlignment="Center"
-                           Margin="0,2,0,0">
+                           Margin="0,4,0,0">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
                             <Style.Triggers>
@@ -179,31 +326,29 @@
                            Foreground="#DDDDDD" 
                            FontSize="16" 
                            TextAlignment="Center"
-                           Margin="0,10,0,0"/>
+                           Margin="0,12,0,0"/>
 
                 <TextBlock Text="{Binding SelectedSong.Album}" 
-                           Foreground="#999999" 
-                           FontSize="13" 
+                           Foreground="#888888" 
+                           FontSize="14" 
                            TextAlignment="Center"
-                           Margin="0,2,0,0"/>
+                           Margin="0,4,0,0"/>
 
-                <!-- Дополнительные теги -->
-                <WrapPanel HorizontalAlignment="Center" Margin="0,15,0,0">
-                    <Border Background="#333333" CornerRadius="4" Padding="8,3" Margin="3">
-                        <TextBlock Foreground="#BBBBBB" FontSize="11">
+                <WrapPanel HorizontalAlignment="Center" Margin="0,18,0,0">
+                    <Border Background="#282828" CornerRadius="12" Padding="12,4" Margin="4">
+                        <TextBlock Foreground="#B3B3B3" FontSize="11" FontWeight="SemiBold">
                             <Run Text="{Binding SelectedSong.Genre, Mode=OneWay}"/>
                         </TextBlock>
                     </Border>
 
-                    <Border Background="#333333" CornerRadius="4" Padding="8,3" Margin="3">
-                        <TextBlock Foreground="#BBBBBB" FontSize="11">
+                    <Border Background="#282828" CornerRadius="12" Padding="12,4" Margin="4">
+                        <TextBlock Foreground="#B3B3B3" FontSize="11" FontWeight="SemiBold">
                             <Run Text="{Binding SelectedSong.BitrateKbps, Mode=OneWay}"/>
                             <Run Text=" kbps"/>
                         </TextBlock>
                     </Border>
 
-                    <!-- BPM показывается только если не null -->
-                    <Border Background="#333333" CornerRadius="4" Padding="8,3" Margin="3">
+                    <Border Background="#282828" CornerRadius="12" Padding="12,4" Margin="4">
                         <Border.Style>
                             <Style TargetType="Border">
                                 <Style.Triggers>
@@ -213,7 +358,7 @@
                                 </Style.Triggers>
                             </Style>
                         </Border.Style>
-                        <TextBlock Foreground="#BBBBBB" FontSize="11">
+                        <TextBlock Foreground="#B3B3B3" FontSize="11" FontWeight="SemiBold">
                             <Run Text="{Binding SelectedSong.Bpm, Mode=OneWay}"/>
                             <Run Text=" BPM"/>
                         </TextBlock>
@@ -223,40 +368,76 @@
         </Grid>
 
         <!-- ================= ФУТЕР: УПРАВЛЕНИЕ И СТАТУС ================= -->
+        <!-- ================= ФУТЕР: УПРАВЛЕНИЕ И СТАТУС ================= -->
         <Border Grid.Column="1" Grid.Row="1" 
-                Background="#2A2A2A" 
-                Padding="20,10">
+                Background="#181818" 
+                Padding="30,15"
+                BorderBrush="#282828"
+                BorderThickness="0,1,0,0">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
-                <!-- Прогресс-бар -->
-                <ProgressBar Grid.Row="0" 
-                             Height="6" 
-                             Background="#333333" 
-                             Foreground="#1DB954"
-                             BorderThickness="0"
-                             Margin="0,0,0,10"
-                             Minimum="0"
-                             Maximum="{Binding TotalDurationSeconds}"
-                             Value="{Binding CurrentPositionSeconds, Mode=OneWay}"/>
 
-                <DockPanel Grid.Row="1">
-                    <!-- Статус текст справа -->
-                    <TextBlock DockPanel.Dock="Right" 
-                               Text="{Binding StatusText}" 
-                               Foreground="#888888" 
-                               FontSize="12"
-                               VerticalAlignment="Center"/>
+                <!-- Прогресс-бар с таймкодами -->
+                <Grid Grid.Row="0" Margin="0,0,0,15">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="45"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="45"/>
+                    </Grid.ColumnDefinitions>
 
-                    <!-- Кнопка Play/Pause по центру -->
-                    <Button Content="⏯ Play / Pause" 
+                    <TextBlock Grid.Column="0" 
+                               Text="{Binding CurrentPositionSeconds, Converter={StaticResource TimeConv}, FallbackValue=0:00}" 
+                               Foreground="#A0A0A0" 
+                               FontSize="11" 
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Right"
+                               Margin="0,0,10,0"/>
+
+                    <Slider Grid.Column="1" 
+                            Style="{StaticResource ProgressSliderStyle}"
+                            VerticalAlignment="Center"/>
+
+                    <TextBlock Grid.Column="2" 
+                               Text="{Binding TotalDurationSeconds, Converter={StaticResource TimeConv}, FallbackValue=0:00}" 
+                               Foreground="#A0A0A0" 
+                               FontSize="11" 
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Left"
+                               Margin="10,0,0,0"/>
+                </Grid>
+
+                <!-- Панель управления: Grid вместо DockPanel для фиксации центра -->
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <!-- Левая часть (зеркальная правой для баланса) -->
+                        <ColumnDefinition Width="*"/>
+                        <!-- Центр: ровно по размеру контента -->
+                        <ColumnDefinition Width="Auto"/>
+                        <!-- Правая часть: статус текст -->
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Кнопка Play/Pause в центральной колонке -->
+                    <Button Grid.Column="1"
+                            Content="⏯" 
                             Command="{Binding PlayPauseCommand}"
-                            Style="{StaticResource ControlButtonStyle}"
-                            HorizontalAlignment="Center"
-                            MinWidth="160"/>
-                </DockPanel>
+                            Style="{StaticResource PlayButtonStyle}"
+                            ToolTip="Play / Pause"
+                            HorizontalAlignment="Center"/>
+
+                    <!-- Статус текст в правой колонке, выровнен вправо -->
+                    <TextBlock Grid.Column="2" 
+                               Text="{Binding StatusText}" 
+                               Foreground="#666666" 
+                               FontSize="12"
+                               VerticalAlignment="Center"
+                               HorizontalAlignment="Right"
+                               TextTrimming="CharacterEllipsis"
+                               ToolTip="{Binding StatusText}"/>
+                </Grid>
             </Grid>
         </Border>
     </Grid>
