@@ -4,12 +4,14 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Threading;
 using WpfApp14.Converters;
 using WpfApp14.Models;
 using WpfApp14.Services;
 using WpfApp14.Utils;
+using WpfApp14.Views;
 
 namespace WpfApp14.ViewModels
 {
@@ -74,7 +76,7 @@ namespace WpfApp14.ViewModels
 
                 if (_isUserSeeking)
                 {
-                    _lastKnownPosition = value;       // Обновляем кэш при seek
+                    _lastKnownPosition = value;
                     _audioService.Seek(value);
                     _isUserSeeking = false;
                 }
@@ -125,7 +127,9 @@ namespace WpfApp14.ViewModels
         #region I_Command
         public ICommand PlayPauseCommand { get; }
         public ICommand OpenFileCommand { get; }
+        public ICommand OpenUrlCommand { get; }
         public ICommand SaveToAppDataCommand { get; }
+        public ICommand ReloadSongsCommand { get; }
         public ICommand RemoveFromSessionCommand { get; }
         public ICommand OpenFileLocationCommand { get; }
         public ICommand EditMetadataCommand { get; }
@@ -236,16 +240,15 @@ namespace WpfApp14.ViewModels
             {
                 if (song.IsSavedToAppData)
                 {
-                    // === УДАЛЕНИЕ из AppData ===
+                    // === Remove From AppData ===
 
-                    // Удаляем аудиофайл
                     if (!string.IsNullOrEmpty(song.AppDataFilePath) && File.Exists(song.AppDataFilePath))
                     {
+                        Songs.Remove(song);
                         File.Delete(song.AppDataFilePath);
                         Logger.Log($"Deleted from AppData: {song.AppDataFilePath}");
                     }
 
-                    // Удаляем обложку, если она хранится в AppData
                     if (!string.IsNullOrEmpty(song.BackgroundImagePath) &&
                         song.BackgroundImagePath.StartsWith(_appDataFolder) &&
                         File.Exists(song.BackgroundImagePath))
@@ -254,7 +257,6 @@ namespace WpfApp14.ViewModels
                         Logger.Log($"Deleted cover from AppData: {song.BackgroundImagePath}");
                     }
 
-                    // Если трек сейчас играет — останавливаем, т.к. файл удалён
                     if (SelectedSong == song)
                     {
                         _audioService.Stop();
@@ -270,12 +272,12 @@ namespace WpfApp14.ViewModels
 
                     Logger.Log($"Removed '{song.Title}' from library.");
                     StatusText = $"Removed '{song.Title}' from library.";
+                    Notify(nameof(Songs));
                 }
                 else
                 {
-                    // === СОХРАНЕНИЕ в AppData ===
+                    // === Save To AppData ===
 
-                    // Проверяем, что исходный файл существует
                     if (string.IsNullOrEmpty(song.FilePathOrUri) || !File.Exists(song.FilePathOrUri))
                     {
                         Logger.Error($"Cannot save to AppData — source file not found: {song.FilePathOrUri}");
@@ -284,10 +286,9 @@ namespace WpfApp14.ViewModels
                     }
 
                     string fileName = Path.GetFileName(song.FilePathOrUri);
-                    string destPath = Path.Combine(_appDataFolder, fileName);
-
-                    // Избегаем дубликатов имён файлов
+                    string destPath = Path.Combine(_appDataFolder,"Songs", fileName);
                     int counter = 1;
+
                     while (File.Exists(destPath))
                     {
                         string nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
@@ -295,12 +296,9 @@ namespace WpfApp14.ViewModels
                         destPath = Path.Combine(_appDataFolder, $"{nameWithoutExt}_{counter}{ext}");
                         counter++;
                     }
-
-                    // Копируем аудиофайл в AppData
                     File.Copy(song.FilePathOrUri, destPath, true);
                     Logger.Log($"Copied to AppData: {destPath}");
 
-                    // Извлекаем обложку из оригинального файла и сохраняем рядом
                     try
                     {
                         using (var tagFile = TagLib.File.Create(song.FilePathOrUri))
@@ -313,7 +311,6 @@ namespace WpfApp14.ViewModels
                                 if (!Directory.Exists(coversDir))
                                     Directory.CreateDirectory(coversDir);
 
-                                // Определяем расширение обложки по MIME-типу
                                 string coverExt = ".jpg";
                                 if (!string.IsNullOrEmpty(pic.MimeType))
                                 {
@@ -335,11 +332,7 @@ namespace WpfApp14.ViewModels
                     catch (Exception ex)
                     {
                         Logger.Error($"Cover extraction failed for '{song.Title}': {ex.Message}");
-                        // Обложка не критична — продолжаем без неё
                     }
-
-                    // Обновляем путь воспроизведения на копию в AppData
-                    // Теперь трек будет играться из AppData, а не из оригинального расположения
                     song.FilePathOrUri = destPath;
                     song.AppDataFilePath = destPath;
                     song.IsSavedToAppData = true;
@@ -369,7 +362,6 @@ namespace WpfApp14.ViewModels
         {
             if (!(param is Song song)) return;
 
-            // Если удаляемый трек сейчас играет - останавливаем
             if (SelectedSong == song)
             {
                 _audioService.Stop();
@@ -399,7 +391,6 @@ namespace WpfApp14.ViewModels
 
             try
             {
-                // Открываем проводник с выделенным файлом
                 Process.Start("explorer.exe", $"/select,\"{pathToOpen}\"");
                 Logger.Log($"Opened location: {pathToOpen}");
             }
@@ -413,12 +404,8 @@ namespace WpfApp14.ViewModels
         private void EditMetadata(object param)
         {
             if (!(param is Song song)) return;
-
-            // ЗАГЛУШКА: Редактирование метаданных требует отдельного окна
-            StatusText = $"Edit mode for '{song.Title}' (Not implemented yet)";
+            StatusText = $"Edit mode not implemented yet";
             Logger.Log($"Edit requested for: {song.Title}");
-
-            // TODO: Здесь будет открытие EditSongWindow(song)
         }
 
         private void AddToQueue(object param)
@@ -481,6 +468,14 @@ namespace WpfApp14.ViewModels
                 SelectedSong = newSong;
             }
         }
+
+        private void OpenUrlDialogAsync()
+        {
+            UrlWindow w = new UrlWindow();
+            w.ShowDialog();
+            ReloadSongs();            
+        }
+
         private void TogglePlayPause()
         {
             if (SelectedSong == null || string.IsNullOrEmpty(SelectedSong.FilePathOrUri))
@@ -528,7 +523,7 @@ namespace WpfApp14.ViewModels
             try
             {
                 string[] audioExtensions = { ".mp3", ".wav", ".flac", ".ogg", ".wma", ".aac" };
-                var files = Directory.GetFiles(_appDataFolder);
+                var files = Directory.GetFiles(Path.Combine(_appDataFolder, "Songs"));
 
                 int idCounter = Songs.Count + 1;
                 _lastKnownPosition = 0;
@@ -562,7 +557,6 @@ namespace WpfApp14.ViewModels
 
                             duration = file.Properties.Duration.TotalSeconds;
 
-                            // Извлекаем обложку, если есть
                             if (file.Tag.Pictures.Length > 0)
                             {
                                 var pic = file.Tag.Pictures[0];
@@ -608,6 +602,10 @@ namespace WpfApp14.ViewModels
             catch (Exception ex)
             {
                 Logger.Error($"Failed to load from AppData: {ex.Message}");
+            }
+            finally
+            {
+                Notify(nameof(Songs));
             }
         }
         private void ToggleLoop(object param)
@@ -676,6 +674,12 @@ namespace WpfApp14.ViewModels
             Logger.Log($"[SHUFFLE] Playing random track: index {randomIndex}");
             SelectedSong = Songs[randomIndex];
         }
+        private void ReloadSongs()
+        {
+            Songs.Clear();
+            LoadFromAppData();
+            Notify(nameof(Songs));
+        }
         #endregion
 
         #region Constructor
@@ -685,18 +689,23 @@ namespace WpfApp14.ViewModels
             if (!Directory.Exists(_appDataFolder))
                 Directory.CreateDirectory(_appDataFolder);
 
+            if (!Directory.Exists(Path.Combine(_appDataFolder,"Songs")))
+                Directory.CreateDirectory(Path.Combine(_appDataFolder, "Songs"));
+
             PlayPauseCommand = new ButtonCommand(TogglePlayPause);
             OpenFileCommand = new ButtonCommand(OpenFileDialog);
+            OpenUrlCommand = new ButtonCommand(OpenUrlDialogAsync);
             ToggleLoopCommand = new ButtonCommand(ToggleLoop);
             ToggleShuffleCommand = new ButtonCommand(ToggleShuffle);
             SaveToAppDataCommand = new ButtonCommand(SaveToAppData);
+            ReloadSongsCommand = new ButtonCommand(ReloadSongs);
             RemoveFromSessionCommand = new ButtonCommand(RemoveFromSession);
             OpenFileLocationCommand = new ButtonCommand(OpenFileLocation);
             EditMetadataCommand = new ButtonCommand(EditMetadata);
             AddToQueueCommand = new ButtonCommand(AddToQueue);
 
             _progressTimer = new DispatcherTimer();
-            _progressTimer.Interval = TimeSpan.FromMilliseconds(30);
+            _progressTimer.Interval = TimeSpan.FromMilliseconds(25);
             _progressTimer.Tick += ProgressTimer_Tick;
 
             _audioService.TrackEnded += () =>

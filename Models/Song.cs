@@ -3,7 +3,7 @@ using WpfApp14.ViewModels;
 
 namespace WpfApp14.Models
 {
-    public class Song : VM // Предполагаю, что Song наследуется от VM для Notify, если нет - уберите ": VM" и Notify
+    public class Song : VM
     {
         private bool _isSavedToAppData;
         public bool IsSavedToAppData

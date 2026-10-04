@@ -1,8 +1,8 @@
 ﻿using System;
 using System.IO;
-using System.Runtime.InteropServices; // <s/> Для GCHandle
+using System.Runtime.InteropServices;
 using WpfApp14.Utils;
-using Un4seen.Bass; // <s/> Импорт BASS.NET
+using Un4seen.Bass;
 
 namespace WpfApp14.Services
 {
@@ -45,20 +45,7 @@ namespace WpfApp14.Services
         }
         #endregion
 
-        public AudioService()
-        {
-            if (!Bass.BASS_Init(-1, 44100, BASSInit.BASS_DEVICE_DEFAULT, IntPtr.Zero))
-            {
-                Logger.Error("Failed to initialize BASS audio engine.");
-                throw new InvalidOperationException("BASS Init failed");
-            }
-
-            _instance = this;
-            _syncProcDelegate = OnTrackEndCallback;
-
-            Logger.Log("BASS audio engine initialized.");
-        }
-
+        #region Track_Control
         public void Play(string filePath)
         {
             if (!File.Exists(filePath))
@@ -105,32 +92,6 @@ namespace WpfApp14.Services
                 _isPlayingInternal = false;
             }
         }
-
-        private static void OnTrackEndCallback(int handle, int channel, int data, IntPtr user)
-        {
-            try
-            {
-                var service = _instance;
-
-                if (service != null && service._streamHandle == handle)
-                {
-                    service._isPlayingInternal = false;
-                    Logger.Log("[BASS] Track ended callback fired.");
-                    service.TrackEnded?.Invoke();
-                }
-                else
-                {
-                    Logger.Log($"[BASS] Callback fired but handle mismatch. Callback: {handle}, Current: {service?._streamHandle}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"Error in TrackEnd callback: {ex.Message}");
-            }
-
-            Bass.BASS_ChannelRemoveSync(handle, data);
-        }
-
         public void Pause()
         {
             if (_streamHandle != 0)
@@ -145,7 +106,6 @@ namespace WpfApp14.Services
         {
             if (_streamHandle != 0 && !_isPlayingInternal)
             {
-                // resume=true означает продолжить с текущей позиции, а не начать сначала
                 Bass.BASS_ChannelPlay(_streamHandle, true);
                 _isPlayingInternal = true;
                 Logger.Log("Resumed.");
@@ -190,21 +150,39 @@ namespace WpfApp14.Services
         }
         public void Stop()
         {
-            if (_streamHandle != 0)
-            {
-                // Сначала удаляем все синхронизации, чтобы избежать гонок данных
-                Bass.BASS_ChannelRemoveSync(_streamHandle, 0); // 0 - удалить все
-
+            if (_streamHandle != 0) {
+                Bass.BASS_ChannelRemoveSync(_streamHandle, 0);
                 Bass.BASS_ChannelStop(_streamHandle);
                 Bass.BASS_StreamFree(_streamHandle);
                 _streamHandle = 0;
             }
-
             _isPlayingInternal = false;
             Logger.Log("Stopped and freed resources.");
         }
+        private static void OnTrackEndCallback(int handle, int channel, int data, IntPtr user)
+        {
+            try
+            {
+                var service = _instance;
 
+                if (service != null && service._streamHandle == handle)
+                {
+                    service._isPlayingInternal = false;
+                    Logger.Log("[BASS] Track ended callback fired.");
+                    service.TrackEnded?.Invoke();
+                }
+                else
+                {
+                    Logger.Log($"[BASS] Callback fired but handle mismatch. Callback: {handle}, Current: {service?._streamHandle}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Error in TrackEnd callback: {ex.Message}");
+            }
 
+            Bass.BASS_ChannelRemoveSync(handle, data);
+        }
         public void Seek(double seconds)
         {
             if (_streamHandle == 0) return;
@@ -223,7 +201,6 @@ namespace WpfApp14.Services
         {
             if (_streamHandle != 0)
             {
-                // <s/> Замена Math.Clamp на совместимый с .NET FW код
                 float clampedVol = vol;
                 if (clampedVol < 0f) clampedVol = 0f;
                 if (clampedVol > 1f) clampedVol = 1f;
@@ -231,7 +208,25 @@ namespace WpfApp14.Services
                 Bass.BASS_ChannelSetAttribute(_streamHandle, BASSAttribute.BASS_ATTRIB_VOL, clampedVol);
             }
         }
+        #endregion
 
+        #region Constructor
+        public AudioService()
+        {
+            if (!Bass.BASS_Init(-1, 44100, BASSInit.BASS_DEVICE_DEFAULT, IntPtr.Zero))
+            {
+                Logger.Error("Failed to initialize BASS audio engine.");
+                throw new InvalidOperationException("BASS Init failed");
+            }
+
+            _instance = this;
+            _syncProcDelegate = OnTrackEndCallback;
+
+            Logger.Log("BASS audio engine initialized.");
+        }
+        #endregion
+
+        #region Dispose
         public void Dispose()
         {
             Stop();
@@ -243,5 +238,6 @@ namespace WpfApp14.Services
             Bass.BASS_Free();
             Logger.Log("AudioService disposed.");
         }
+        #endregion
     }
 }

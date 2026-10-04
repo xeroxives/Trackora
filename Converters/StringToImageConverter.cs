@@ -10,7 +10,6 @@ namespace WpfApp14.Converters
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            // Если значение null или пустая строка - возвращаем null (изображение не загрузится, будет виден плейсхолдер под ним)
             if (value is string path && !string.IsNullOrWhiteSpace(path))
             {
                 try
@@ -19,7 +18,6 @@ namespace WpfApp14.Converters
                 }
                 catch
                 {
-                    // Если путь битый или файл удален - тоже null
                     return null;
                 }
             }
