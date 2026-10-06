@@ -5,6 +5,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
+using WpfApp14.Interfaces;
 using WpfApp14.Utils;
 using WpfApp14.ViewModels;
 
@@ -41,44 +42,49 @@ namespace WpfApp14
         private void Slider_DragCompleted(object sender, DragCompletedEventArgs e)
         {
             _isDragging = false;
-            if (sender is Slider slider && DataContext is MainVM vm)
+            if (sender is Slider slider && DataContext is MainVM mainVM)
             {
-                Logger.Log($"[SLIDER] Drag completed. Value: {slider.Value:F2}s");
-                vm.SeekTo(slider.Value);
-
-                slider.ClearValue(Slider.ValueProperty);
-                BindingExpression be = slider.GetBindingExpression(Slider.ValueProperty);
-                if (be != null)
+                if (mainVM.CurrentVM is I_PlayerVM playerVM) 
                 {
-                    be.UpdateTarget();
-                    Logger.Log("[SLIDER] Binding re-synced after drag.");
+                    Logger.Log($"[SLIDER] Drag completed. Value: {slider.Value:F2}s");
+                    playerVM.SeekTo(slider.Value);
+
+                    slider.ClearValue(Slider.ValueProperty);
+                    BindingExpression be = slider.GetBindingExpression(Slider.ValueProperty);
+                    if (be != null)
+                    {
+                        be.UpdateTarget();
+                        Logger.Log("[SLIDER] Binding re-synced after drag.");
+                    }
                 }
             }
         }
-
         private void Slider_PreviewMouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
             if (_isDragging) return;
 
-            if (sender is Slider slider && DataContext is MainVM vm)
+            if (sender is Slider slider && DataContext is MainVM mainVM)
             {
-                double clickPos = e.GetPosition(slider).X;
-                double ratio = clickPos / slider.ActualWidth;
-                if (ratio < 0) ratio = 0;
-                if (ratio > 1) ratio = 1;
-
-                double seekValue = ratio * slider.Maximum;
-
-                Logger.Log($"[SLIDER] Click seek. Ratio: {ratio:F3}, Value: {seekValue:F2}s");
-
-                vm.SeekTo(seekValue);
-
-                slider.ClearValue(Slider.ValueProperty);
-                BindingExpression be = slider.GetBindingExpression(Slider.ValueProperty);
-                if (be != null)
+                if (mainVM.CurrentVM is MainPageVM vm)
                 {
-                    be.UpdateTarget();
-                    Logger.Log("[SLIDER] Binding re-synced after click.");
+                    double clickPos = e.GetPosition(slider).X;
+                    double ratio = clickPos / slider.ActualWidth;
+                    if (ratio < 0) ratio = 0;
+                    if (ratio > 1) ratio = 1;
+
+                    double seekValue = ratio * slider.Maximum;
+
+                    Logger.Log($"[SLIDER] Click seek. Ratio: {ratio:F3}, Value: {seekValue:F2}s");
+
+                    vm.SeekTo(seekValue);
+
+                    slider.ClearValue(Slider.ValueProperty);
+                    BindingExpression be = slider.GetBindingExpression(Slider.ValueProperty);
+                    if (be != null)
+                    {
+                        be.UpdateTarget();
+                        Logger.Log("[SLIDER] Binding re-synced after click.");
+                    }
                 }
             }
         }
@@ -101,8 +107,10 @@ namespace WpfApp14
 
         protected override void OnClosed(EventArgs e)
         {
-            if (DataContext is MainVM vm)
-                vm.Cleanup();
+            if (DataContext is MainVM mainVM && mainVM.CurrentVM is I_PlayerVM playerVM)
+            {
+                playerVM.Cleanup();
+            }
             base.OnClosed(e);
         }
     }
