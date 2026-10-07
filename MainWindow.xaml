@@ -5,8 +5,8 @@
         xmlns:views="clr-namespace:WpfApp14.Views"
         xmlns:svg="http://sharpvectors.codeplex.com/svgc/"
         Title="Trackora" 
-        Height="650" Width="950"
-        MinHeight="500" MinWidth="750"
+        Height="650" Width="900"
+        MinHeight="620" MinWidth="830"
         Background="#121212">
 
     <Window.DataContext>

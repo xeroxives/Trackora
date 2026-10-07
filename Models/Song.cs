@@ -33,5 +33,6 @@ namespace WpfApp14.Models
         public string BackgroundImagePath { get; set; } = "";
         public string Info { get; set; } = "";
         public string FilePathOrUri { get; set; } = "";
+        public int ListenedSeconds { get; set; } = 0;
     }
 }

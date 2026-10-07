@@ -36,6 +36,13 @@ namespace WpfApp14.ViewModels
                 {
                     Logger.Log($"[TRACK] Switching from '{_selectedSong?.Title}' to '{value.Title}'. Resetting position.");
 
+                    if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
+                    {
+                        _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds);
+                        Logger.Log($"[STATS] Saved {_currentTrackSeconds:F2}s for hash {_currentTrackHash.Substring(0, 8)}...");
+                    }
+                    _currentTrackSeconds = 0;
+
                     _selectedSong = value;
                     Notify(nameof(SelectedSong));
 
@@ -46,9 +53,12 @@ namespace WpfApp14.ViewModels
 
                     if (!string.IsNullOrEmpty(value.FilePathOrUri))
                     {
+                        _currentTrackHash = FileHasher.ComputePartialHash(value.FilePathOrUri);
+                        _lastTickTime = DateTime.UtcNow;
+
                         _audioService.Play(value.FilePathOrUri);
                         _isPlaying = true;
-                        StatusText = $"Playing: {value.Title}";
+                        StatusText = $"Playing";
                         StartProgressTimer();
                     }
                     else
@@ -123,10 +133,16 @@ namespace WpfApp14.ViewModels
         private Random _random = new Random();
         private int _tickCounter = 0;
         private bool _trackEndHandled = false;
+        private DateTime _lastTickTime;
+        private ListeningStatsService _listeningStatsService = new ListeningStatsService();
+        private string _currentTrackHash;
+        private double _currentTrackSeconds;
         #endregion
 
         #region I_Command
         public ICommand PlayPauseCommand { get; }
+        public ICommand PlayPrevCommand { get; }
+        public ICommand PlayNextCommand { get; }
         public ICommand OpenFileCommand { get; }
         public ICommand OpenUrlCommand { get; }
         public ICommand SaveToAppDataCommand { get; }
@@ -150,13 +166,13 @@ namespace WpfApp14.ViewModels
 
             _tickCounter = 0;
             _trackEndHandled = false;
+            _lastTickTime = DateTime.UtcNow;
 
             if (!_progressTimer.IsEnabled)
                 _progressTimer.Start();
 
             Logger.Log($"[TIMER] Started. Pos: {_lastKnownPosition:F2}s, Duration: {_totalDurationSeconds:F2}s, Timer enabled: {_progressTimer.IsEnabled}");
         }
-
         private void StopProgressTimer()
         {
             Logger.Log($"[TIMER] Stopped. Was enabled: {_progressTimer.IsEnabled}, LastPos: {_lastKnownPosition:F2}s");
@@ -176,11 +192,15 @@ namespace WpfApp14.ViewModels
                     return;
                 }
 
+                double elapsed = (DateTime.UtcNow - _lastTickTime).TotalSeconds;
+                _lastTickTime = DateTime.UtcNow;
+                _currentTrackSeconds += elapsed;
+
                 double pos = _audioService.Position.TotalSeconds;
 
                 if (_tickCounter % 30 == 0)
                 {
-                    Logger.Log($"[TICK #{_tickCounter}] BASS pos: {pos:F2}s, LastKnown: {_lastKnownPosition:F2}s, CurrentUI: {_currentPositionSeconds:F2}s, Duration: {_totalDurationSeconds:F2}s");
+                    Logger.Log($"[TICK #{_tickCounter}] BASS pos: {pos:F2}s, LastKnown: {_lastKnownPosition:F2}s, CurrentUI: {_currentPositionSeconds:F2}s, Duration: {_totalDurationSeconds:F2}s, ActiveSeconds: {_currentTrackSeconds:F2}s");
                 }
 
                 if (!double.IsNaN(pos) && !double.IsInfinity(pos) && pos >= 0)
@@ -277,7 +297,7 @@ namespace WpfApp14.ViewModels
                     {
                         string nameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
                         string ext = Path.GetExtension(fileName);
-                        destPath = Path.Combine(_appDataFolder, $"{nameWithoutExt}_{counter}{ext}");
+                        destPath = Path.Combine(_appDataFolder,"Songs", $"{nameWithoutExt}_{counter}{ext}");
                         counter++;
                     }
                     File.Copy(song.FilePathOrUri, destPath, true);
@@ -291,7 +311,7 @@ namespace WpfApp14.ViewModels
                             {
                                 var pic = tagFile.Tag.Pictures[0];
 
-                                string coversDir = Path.Combine(_appDataFolder, "covers");
+                                string coversDir = Path.Combine(_appDataFolder, "Covers");
                                 if (!Directory.Exists(coversDir))
                                     Directory.CreateDirectory(coversDir);
 
@@ -322,13 +342,13 @@ namespace WpfApp14.ViewModels
                     song.IsSavedToAppData = true;
 
                     Logger.Log($"Saved '{song.Title}' to library: {destPath}");
-                    StatusText = $"Saved '{song.Title}' to Trackora library.";
+                    StatusText = $"Saved.";
                 }
             }
             catch (UnauthorizedAccessException ex)
             {
                 Logger.Error($"Access denied during AppData operation: {ex.Message}");
-                StatusText = "Error: Access denied. Check file permissions.";
+                StatusText = "Error: Access denied.";
             }
             catch (IOException ex)
             {
@@ -341,7 +361,6 @@ namespace WpfApp14.ViewModels
                 StatusText = "Error: Could not save/remove file.";
             }
         }
-
         private void RemoveFromSession(object param)
         {
             if (!(param is Song song)) return;
@@ -358,7 +377,6 @@ namespace WpfApp14.ViewModels
             StatusText = $"Removed '{song.Title}' from session.";
             Logger.Log($"Removed from session: {song.Title}");
         }
-
         private void OpenFileLocation(object param)
         {
             if (!(param is Song song)) return;
@@ -384,18 +402,16 @@ namespace WpfApp14.ViewModels
                 StatusText = "Could not open file location.";
             }
         }
-
         private void EditMetadata(object param)
         {
             if (!(param is Song song)) return;
             StatusText = $"Edit mode not implemented yet";
             Logger.Log($"Edit requested for: {song.Title}");
         }
-
         private void AddToQueue(object param)
         {
             if (!(param is Song song)) return;
-            StatusText = $"Added '{song.Title}' to queue (Stub)";
+            StatusText = $"Added '{song.Title}' to queue";
             Logger.Log($"Add to queue requested: {song.Title}");
         }
 
@@ -424,8 +440,10 @@ namespace WpfApp14.ViewModels
                     {
                         if (!string.IsNullOrEmpty(file.Tag.Title))
                             title = file.Tag.Title;
+
                         if (file.Tag.Performers.Length > 0)
                             artistName = file.Tag.Performers[0];
+
                         if (file.Tag.Genres.Length > 0 && !string.IsNullOrEmpty(file.Tag.Genres[0]))
                             genre = file.Tag.Genres[0];
                         duration = file.Properties.Duration.TotalSeconds;
@@ -452,14 +470,12 @@ namespace WpfApp14.ViewModels
                 SelectedSong = newSong;
             }
         }
-
         private void OpenUrlDialogAsync()
         {
             UrlWindow w = new UrlWindow();
             w.ShowDialog();
             ReloadSongs();
         }
-
         private void TogglePlayPause()
         {
             if (SelectedSong == null || string.IsNullOrEmpty(SelectedSong.FilePathOrUri))
@@ -496,8 +512,13 @@ namespace WpfApp14.ViewModels
                     Logger.Log($"[PLAYPAUSE] Fresh play started.");
                 }
 
+                if (string.IsNullOrEmpty(_currentTrackHash))
+                {
+                    _currentTrackHash = FileHasher.ComputePartialHash(SelectedSong.FilePathOrUri);
+                }
+
                 _isPlaying = true;
-                StatusText = $"Playing: {SelectedSong.Title}";
+                StatusText = $"Playing";
                 StartProgressTimer();
             }
             Notify(nameof(StatusText));
@@ -545,9 +566,9 @@ namespace WpfApp14.ViewModels
                             {
                                 var pic = file.Tag.Pictures[0];
                                 string coverFileName = $"cover_{idCounter}.jpg";
-                                string coverFullPath = Path.Combine(_appDataFolder, "covers", coverFileName);
+                                string coverFullPath = Path.Combine(_appDataFolder, "Covers", coverFileName);
 
-                                string coversDir = Path.Combine(_appDataFolder, "covers");
+                                string coversDir = Path.Combine(_appDataFolder, "Covers");
                                 if (!Directory.Exists(coversDir))
                                     Directory.CreateDirectory(coversDir);
 
@@ -571,7 +592,6 @@ namespace WpfApp14.ViewModels
                         Genre = genre,
                         Album = album,
                         DurationSeconds = duration,
-                        BitrateKbps = 0,
                         Info = $"Artist: {artistName}",
                         BackgroundImagePath = coverPath
                     };
@@ -581,7 +601,7 @@ namespace WpfApp14.ViewModels
                 }
 
                 if (Songs.Count > 0)
-                    StatusText = $"Loaded {Songs.Count} track(s) from library.";
+                    StatusText = $"Loaded {Songs.Count} track(s)";
             }
             catch (Exception ex)
             {
@@ -608,6 +628,13 @@ namespace WpfApp14.ViewModels
         }
         private void OnTrackEnded()
         {
+            if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
+            {
+                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds);
+                Logger.Log($"[STATS] Saved {_currentTrackSeconds:F2}s for hash {_currentTrackHash.Substring(0, 8)}...");
+            }
+            _currentTrackSeconds = 0;
+
             if (Songs == null || Songs.Count == 0)
             {
                 StatusText = "Finished";
@@ -631,19 +658,53 @@ namespace WpfApp14.ViewModels
                     break;
             }
         }
+        private void PlayPrevTrack()
+        {
+            if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
+            {
+                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds);
+            }
+            _currentTrackSeconds = 0;
+
+            int currentIndex = Songs.IndexOf(SelectedSong);
+            int nextIndex = (currentIndex - 1) % Songs.Count;
+            if (nextIndex < 0) nextIndex = Songs.Count - 1;
+            Logger.Log($"[LOOP] Playing prev track: {currentIndex} -> {nextIndex}");
+            SelectedSong = Songs[nextIndex];
+
+            _currentTrackHash = FileHasher.ComputePartialHash(SelectedSong.FilePathOrUri);
+            _lastTickTime = DateTime.UtcNow;
+        }
         private void PlayNextTrack()
         {
+            if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
+            {
+                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds);
+            }
+            _currentTrackSeconds = 0;
+
             int currentIndex = Songs.IndexOf(SelectedSong);
             int nextIndex = (currentIndex + 1) % Songs.Count;
 
-            Logger.Log($"[LOOP] Playing next track: index {nextIndex}");
+            Logger.Log($"[LOOP] Playing next track: {currentIndex} -> {nextIndex}");
             SelectedSong = Songs[nextIndex];
+
+            _currentTrackHash = FileHasher.ComputePartialHash(SelectedSong.FilePathOrUri);
+            _lastTickTime = DateTime.UtcNow;
         }
         private void PlayRandomTrack()
         {
+            if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
+            {
+                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds);
+            }
+            _currentTrackSeconds = 0;
+
             if (Songs.Count <= 1)
             {
                 SelectedSong = Songs[0];
+                _currentTrackHash = FileHasher.ComputePartialHash(SelectedSong.FilePathOrUri);
+                _lastTickTime = DateTime.UtcNow;
                 return;
             }
 
@@ -657,6 +718,9 @@ namespace WpfApp14.ViewModels
 
             Logger.Log($"[SHUFFLE] Playing random track: index {randomIndex}");
             SelectedSong = Songs[randomIndex];
+
+            _currentTrackHash = FileHasher.ComputePartialHash(SelectedSong.FilePathOrUri);
+            _lastTickTime = DateTime.UtcNow;
         }
         private void ReloadSongs()
         {
@@ -682,6 +746,13 @@ namespace WpfApp14.ViewModels
         }
         public void Cleanup()
         {
+            if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
+            {
+                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds);
+                Logger.Log($"[STATS] Saved {_currentTrackSeconds:F2}s on cleanup for hash {_currentTrackHash.Substring(0, 8)}...");
+            }
+            _currentTrackSeconds = 0;
+
             _audioService?.Dispose();
         }
         #endregion
@@ -689,8 +760,6 @@ namespace WpfApp14.ViewModels
         #region Constructor
         public MainPageVM()
         {
-            
-
             _appDataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Trackora");
             if (!Directory.Exists(_appDataFolder))
                 Directory.CreateDirectory(_appDataFolder);
@@ -699,6 +768,10 @@ namespace WpfApp14.ViewModels
                 Directory.CreateDirectory(Path.Combine(_appDataFolder, "Songs"));
 
             PlayPauseCommand = new ButtonCommand(TogglePlayPause);
+            PlayNextCommand = new ButtonCommand(PlayNextTrack);
+            PlayPrevCommand = new ButtonCommand(PlayPrevTrack);
+
+
             OpenFileCommand = new ButtonCommand(OpenFileDialog);
             OpenUrlCommand = new ButtonCommand(OpenUrlDialogAsync);
             ToggleLoopCommand = new ButtonCommand(ToggleLoop);

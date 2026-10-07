@@ -49,7 +49,7 @@ namespace WpfApp14.ViewModels
                 // _settingsVM = new SettingsVM();
             // }
             // CurrentVM = _settingsVM;
-            MessageBox.Show("Be implemented soon");
+            MessageBox.Show("Be implemented soon","Settings");
         }
         private void ToStats()
         {
@@ -58,7 +58,7 @@ namespace WpfApp14.ViewModels
             //    _settingsVM = new SettingsVM();
             //}
             //CurrentVM = _settingsVM;
-            MessageBox.Show("Be implemented soon");
+            MessageBox.Show("Be implemented soon", "Stats");
         }
         #endregion
 
