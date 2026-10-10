@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WpfApp14.Views"
         mc:Ignorable="d" Background="{StaticResource BgPrimary}"
-        Title="EditMetadataWindow" Height="300" Width="450">
+        Title="EditMetadataWindow" Height="400" Width="450">
     <Grid>
         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
             <TextBlock Text="Soon.." Foreground="#FFF" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="38" Margin="5"/>

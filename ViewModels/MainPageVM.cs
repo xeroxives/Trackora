@@ -39,7 +39,7 @@ namespace WpfApp14.ViewModels
 
                     if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
                     {
-                        _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds);
+                        _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds, SelectedSong);
                         Logger.Log($"[STATS] Saved {_currentTrackSeconds:F2}s for hash {_currentTrackHash.Substring(0, 8)}...");
                     }
                     _currentTrackSeconds = 0;
@@ -637,7 +637,7 @@ namespace WpfApp14.ViewModels
         {
             if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
             {
-                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds);
+                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds, SelectedSong);
                 Logger.Log($"[STATS] Saved {_currentTrackSeconds:F2}s for hash {_currentTrackHash.Substring(0, 8)}...");
             }
             _currentTrackSeconds = 0;
@@ -669,7 +669,7 @@ namespace WpfApp14.ViewModels
         {
             if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
             {
-                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds);
+                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds, SelectedSong);
             }
             _currentTrackSeconds = 0;
 
@@ -686,7 +686,7 @@ namespace WpfApp14.ViewModels
         {
             if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
             {
-                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds);
+                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds, SelectedSong);
             }
             _currentTrackSeconds = 0;
 
@@ -703,7 +703,7 @@ namespace WpfApp14.ViewModels
         {
             if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
             {
-                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds);
+                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds, SelectedSong);
             }
             _currentTrackSeconds = 0;
 
@@ -755,7 +755,7 @@ namespace WpfApp14.ViewModels
         {
             if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
             {
-                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds);
+                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds, SelectedSong);
                 Logger.Log($"[STATS] Saved {_currentTrackSeconds:F2}s on cleanup for hash {_currentTrackHash.Substring(0, 8)}...");
             }
             _currentTrackSeconds = 0;

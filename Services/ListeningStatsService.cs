@@ -1,9 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.SQLite;
+using Microsoft.Data.Sqlite;
 using System.IO;
 using System.Threading.Tasks;
 using WpfApp14.Models;
+using System.Diagnostics;
 
 namespace WpfApp14.Utils
 {
@@ -17,28 +18,28 @@ namespace WpfApp14.Utils
         {
             var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             var dbPath = Path.Combine(appData, "Trackora", "Stats", "stats.db");
-            _connectionString = $"Data Source={dbPath};Version=3;Journal Mode=WAL;";
+            _connectionString = $"Data Source={dbPath};";
 
-            Logger.Log($"[STATS] DB path: {dbPath}");
-            Logger.Log($"[STATS] DB exists before init: {File.Exists(dbPath)}");
+			Debug.WriteLine($"[STATS] DB path: {dbPath}");
+			Debug.WriteLine($"[STATS] DB exists before init: {File.Exists(dbPath)}");
 
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(dbPath));
                 InitializeDatabase();
                 _isInitialized = true;
-                Logger.Log($"[STATS] DB exists after init: {File.Exists(dbPath)}");
+                Debug.WriteLine($"[STATS] DB exists after init: {File.Exists(dbPath)}");
             }
             catch (Exception ex)
             {
-                Logger.Error($"[STATS] Failed to initialize database: {ex.Message}");
+				Debug.WriteLine($"[STATS] Failed to initialize database: {ex.Message}");
                 _isInitialized = false;
             }
         }
 
         private void InitializeDatabase()
         {
-            using (var connection = new SQLiteConnection(_connectionString))
+            using (var connection = new SqliteConnection(_connectionString))
             {
                 connection.Open();
 
@@ -47,6 +48,7 @@ namespace WpfApp14.Utils
                     command.CommandText = @"
                         CREATE TABLE IF NOT EXISTS ListeningStats (
                             Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            Title TEXT,
                             FileHash TEXT NOT NULL UNIQUE,
                             TotalSeconds REAL NOT NULL DEFAULT 0
                         );";
@@ -55,29 +57,37 @@ namespace WpfApp14.Utils
             }
         }
 
-        public void AddListeningTime(string fileHash, double seconds)
+        public void AddListeningTime(string fileHash, double seconds, Song s)
         {
-            if (!_isInitialized || string.IsNullOrEmpty(fileHash) || seconds <= 0)
-                return;
+            if (!_isInitialized || string.IsNullOrEmpty(fileHash) || seconds <= 0){
+				Debug.WriteLine($"[ConnSQL] Start Func | isInitt: {_isInitialized} | fh: {fileHash} | sec: {seconds}");
+				return;
+			}
+			
 
             Task.Run(() =>
             {
-                try
+				Debug.WriteLine($"[ConnSQL] Start-Task");
+				try
                 {
-                    using (var connection = new SQLiteConnection(_connectionString))
+					Debug.WriteLine($"[ConnSQL] Try");
+					using (var connection = new SqliteConnection(_connectionString))
                     {
                         connection.Open();
+
+                        Debug.WriteLine($"[ConnSQL] open: {connection}");
 
                         using (var command = connection.CreateCommand())
                         {
                             command.CommandText = @"
-                                INSERT INTO ListeningStats (FileHash, TotalSeconds)
-                                VALUES (@hash, @seconds)
-                                ON CONFLICT(FileHash) DO UPDATE 
-                                    SET TotalSeconds = TotalSeconds + @seconds;";
+                                INSERT INTO ListeningStats (Title, FileHash, TotalSeconds)
+                                VALUES (@title, @hash, @seconds)
+                                ON CONFLICT(FileHash) DO UPDATE
+                                    SET TotalSeconds = TotalSeconds + @seconds, Title = @title;";
                             command.Parameters.AddWithValue("@hash", fileHash);
                             command.Parameters.AddWithValue("@seconds", seconds);
-                            command.ExecuteNonQuery();
+                            command.Parameters.AddWithValue("@title", s.Title);
+							Debug.WriteLine($"[ConnSQL] exec: {command.ExecuteNonQuery()}");
                         }
                     }
                 }
@@ -95,7 +105,7 @@ namespace WpfApp14.Utils
 
             try
             {
-                using (var connection = new SQLiteConnection(_connectionString))
+                using (var connection = new SqliteConnection(_connectionString))
                 {
                     connection.Open();
 
@@ -111,7 +121,7 @@ namespace WpfApp14.Utils
             }
             catch (Exception ex)
             {
-                Logger.Error($"[STATS] Failed to get listening time: {ex.Message}");
+                Logger.Error($"[STATS] Failed to get time: {ex.Message}");
                 return 0;
             }
         }
@@ -125,7 +135,7 @@ namespace WpfApp14.Utils
 
             try
             {
-                using (var connection = new SQLiteConnection(_connectionString))
+                using (var connection = new SqliteConnection(_connectionString))
                 {
                     connection.Open();
 
