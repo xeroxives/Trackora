@@ -157,6 +157,9 @@
     <Compile Include="ViewModels\StatsVM.cs" />
     <Compile Include="ViewModels\UrlWindowVM.cs" />
     <Compile Include="ViewModels\VM.cs" />
+    <Compile Include="Views\EditMetadataWindow.xaml.cs">
+      <DependentUpon>EditMetadataWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\MainPage.xaml.cs">
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
@@ -182,6 +185,10 @@
       <SubType>Code</SubType>
     </Compile>
     <Page Include="Themes\Colors.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\EditMetadataWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
