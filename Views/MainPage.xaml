@@ -6,6 +6,7 @@
       xmlns:converters="clr-namespace:WpfApp14.Converters"
       xmlns:viewmodels="clr-namespace:WpfApp14.ViewModels"
       xmlns:svg="http://sharpvectors.codeplex.com/svgc/"
+      xmlns:ext="clr-namespace:WpfApp14.Extensions"
       d:DataContext="{d:DesignInstance Type=viewmodels:MainPageVM}"
       mc:Ignorable="d" Background="{StaticResource BgPrimary}" >
 
@@ -15,144 +16,6 @@
         <converters:ProgressWidthConverter x:Key="ProgressWidthConv"/>
         <converters:BoolToSaveTextConverter x:Key="BoolToSaveTextConverter"/>
         <converters:BoolToColorConverter x:Key="BoolToColorConv"/>
-        <!-- Style of btns -->
-        <Style TargetType="Button" x:Key="ControlButtonStyle">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#B3B3B3"/>
-            <Setter Property="FontSize" Value="20"/>
-            <Setter Property="Padding" Value="10"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Foreground" Value="White"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-
-        <!-- Play/Pause Style -->
-        <Style TargetType="Button" x:Key="PlayButtonStyle" BasedOn="{StaticResource ControlButtonStyle}">
-            <Setter Property="Background" Value="{StaticResource BgButtonPlay}"/>
-            <Setter Property="Foreground" Value="{StaticResource FgButtonPlay}"/>
-            <Setter Property="FontSize" Value="24"/>
-            <Setter Property="Width" Value="48"/>
-            <Setter Property="Height" Value="48"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" 
-                                CornerRadius="24" 
-                                Width="{TemplateBinding Width}" 
-                                Height="{TemplateBinding Height}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="{StaticResource BgHoverBtnPlay}"/>
-                                <Setter Property="Cursor" Value="Hand"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <Style TargetType="Button" x:Key="SwitchSongBtnStyle" BasedOn="{StaticResource ControlButtonStyle}">
-            <Setter Property="Background" Value="{StaticResource BgButtonSwitch}"/>
-            <Setter Property="Foreground" Value="{StaticResource FgButtonSwitch}"/>
-            <Setter Property="FontSize" Value="18"/>
-            <Setter Property="Width" Value="40"/>
-            <Setter Property="Height" Value="40"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" 
-                                CornerRadius="24" 
-                                Width="{TemplateBinding Width}" 
-                                Height="{TemplateBinding Height}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="{StaticResource BgHoverBtnSwitch}"/>
-                                <Setter Property="Cursor" Value="Hand"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <Style TargetType="Slider" x:Key="ProgressSliderStyle">
-            <Setter Property="Minimum" Value="0"/>
-            <Setter Property="Maximum" Value="{Binding TotalDurationSeconds, FallbackValue=100}"/>
-            <Setter Property="Value" Value="{Binding CurrentPositionSeconds, Mode=OneWay}"/>
-            <Setter Property="Background" Value="{StaticResource BgSlider}"/>
-            <Setter Property="Foreground" Value="{StaticResource FgSlider}"/>
-            <Setter Property="Height" Value="12"/>
-            <Setter Property="IsMoveToPointEnabled" Value="True"/>
-            <Setter Property="AutoToolTipPlacement" Value="None"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Slider">
-                        <Grid x:Name="RootGrid" Background="Transparent">
-
-                            <Border x:Name="TrackBackground" 
-                                    Background="{TemplateBinding Background}" 
-                                    Height="4" 
-                                    CornerRadius="2" 
-                                    VerticalAlignment="Center"/>
-
-                            <Track x:Name="PART_Track" VerticalAlignment="Center">
-                                <Track.DecreaseRepeatButton>
-                                    <RepeatButton Command="Slider.DecreaseLarge">
-                                        <RepeatButton.Template>
-                                            <ControlTemplate TargetType="RepeatButton">
-                                                <Border Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Slider}}" 
-                                                Height="4" 
-                                                CornerRadius="2"/>
-                                            </ControlTemplate>
-                                        </RepeatButton.Template>
-                                    </RepeatButton>
-                                </Track.DecreaseRepeatButton>
-                                <Track.IncreaseRepeatButton>
-                                    <RepeatButton Command="Slider.IncreaseLarge">
-                                        <RepeatButton.Template>
-                                            <ControlTemplate TargetType="RepeatButton">
-                                                <Border Background="Transparent" Height="12"/>
-                                            </ControlTemplate>
-                                        </RepeatButton.Template>
-                                    </RepeatButton>
-                                </Track.IncreaseRepeatButton>
-                                <Track.Thumb>
-                                    <Thumb x:Name="Thumb" Width="12" Height="12" Opacity="0" Cursor="Hand">
-                                        <Thumb.Template>
-                                            <ControlTemplate TargetType="Thumb">
-                                                <Ellipse Fill="{StaticResource BgDotOnSlider}" Width="12" Height="12" StrokeThickness="0">
-                                                    <Ellipse.Effect>
-                                                        <DropShadowEffect BlurRadius="4" ShadowDepth="1" Opacity="0.4"/>
-                                                    </Ellipse.Effect>
-                                                </Ellipse>
-                                            </ControlTemplate>
-                                        </Thumb.Template>
-                                    </Thumb>
-                                </Track.Thumb>
-                            </Track>
-
-                        </Grid>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Thumb" Property="Opacity" Value="1"/>
-                                <Setter Property="Foreground" Value="{StaticResource FgHoverSlider}"/>
-                            </Trigger>
-                            <Trigger SourceName="Thumb" Property="IsDragging" Value="True">
-                                <Setter TargetName="Thumb" Property="Opacity" Value="1"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
     </UserControl.Resources>
 
     <Grid>
@@ -175,11 +38,13 @@
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <TextBlock Grid.Column="0" 
-                           Text="Trackora" 
-                           Foreground="#FFF" 
-                           FontSize="22" 
-                           FontWeight="Bold" 
+                    <TextBlock Grid.Column="0"
+                           Text="Trackora"
+                           Foreground="#FFF"
+                            FontSize="{ext:FontSize MainViewText,22}"
+                            FontFamily="{ext:FontFamily MainViewText}"
+                           FontWeight="Bold"
+                               
                            VerticalAlignment="Center"/>
 
                     <Button Grid.Column="1"
@@ -195,11 +60,12 @@
                 </Grid>
 
                 <StackPanel Orientation="Horizontal">
-                    <Button Content="📂  Импорт файлов" 
-                        Command="{Binding OpenFileCommand}" 
-                        Style="{StaticResource ControlButtonStyle}" 
+                    <Button Content="📂  Импорт файлов"
+                        Command="{Binding OpenFileCommand}"
+                        Style="{StaticResource ControlButtonStyle}"
                         HorizontalAlignment="Left"
-                        FontSize="14"
+                        FontSize="{ext:FontSize MainViewText,14}"
+                        FontFamily="{ext:FontFamily MainViewText}"
                         Margin="0,0,0,10"/>
                     <Button Content="🌐" 
                         Command="{Binding OpenUrlCommand}" 
@@ -248,57 +114,54 @@
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}">
 
+                <ListBox.Resources>
+                    <ResourceDictionary Source="/Themes/StylesMainPage.xaml"/>
+                </ListBox.Resources>
+
                 <ListBox.ContextMenu>
                     <ContextMenu DataContext="{Binding PlacementTarget.Tag, RelativeSource={RelativeSource Self}}">
-
-                        <!-- Команда из MainVM — ищем через Window -->
-                        <MenuItem Header="🔁 Reload Songs" 
-                  Command="{Binding DataContext.ReloadSongsCommand, 
-                            RelativeSource={RelativeSource AncestorType=Window}}"/>
-
+                        <MenuItem Header="🔁 Reload Songs" FontFamily="{ext:FontFamily ContextMenuListBox}" FontSize="{ext:FontSize ContextMenuListBox,12}"
+                                  Command="{Binding ReloadSongsCommand}"
+                                  CommandParameter="{Binding PlacementTarget.SelectedItem, 
+                                                    RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                         <Separator/>
 
-                        <!-- Остальные команды из MainPageVM — берём из текущего DataContext (Tag) -->
-                        <MenuItem Command="{Binding SaveToAppDataCommand}"
-                  CommandParameter="{Binding PlacementTarget.SelectedItem, 
-                                     RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                        <MenuItem Command="{Binding SaveToAppDataCommand}" FontFamily="{ext:FontFamily ContextMenuListBox}" FontSize="{ext:FontSize ContextMenuListBox,12}"
+                                  CommandParameter="{Binding PlacementTarget.SelectedItem, 
+                                                     RelativeSource={RelativeSource AncestorType=ContextMenu}}">
                             <MenuItem.Style>
                                 <Style TargetType="MenuItem">
                                     <Setter Property="Header" Value="💾 Сохранить в библиотеку"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding PlacementTarget.SelectedItem.IsSavedToAppData, 
-                                               RelativeSource={RelativeSource AncestorType=ContextMenu}}" 
-                                     Value="True">
+                                                               RelativeSource={RelativeSource AncestorType=ContextMenu}}" 
+                                                     Value="True">
                                             <Setter Property="Header" Value="❌ Удалить из библиотеки"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </MenuItem.Style>
                         </MenuItem>
-
                         <Separator/>
 
-                        <MenuItem Header="🗑️ Удалить из сессии" 
-                  Command="{Binding RemoveFromSessionCommand}"
-                  CommandParameter="{Binding PlacementTarget.SelectedItem, 
-                                     RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-
-                        <MenuItem Header="📂 Расположение файла" 
-                  Command="{Binding OpenFileLocationCommand}"
-                  CommandParameter="{Binding PlacementTarget.SelectedItem, 
-                                     RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-
+                        <MenuItem Header="🗑️ Удалить из сессии"  FontFamily="{ext:FontFamily ContextMenuListBox}" FontSize="{ext:FontSize ContextMenuListBox,12}"
+                                  Command="{Binding RemoveFromSessionCommand}"
+                                  CommandParameter="{Binding PlacementTarget.SelectedItem, 
+                                                     RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                        <MenuItem Header="📂 Расположение файла1" FontFamily="{ext:FontFamily ContextMenuListBox}" FontSize="{ext:FontSize ContextMenuListBox,12}"
+                                  Command="{Binding OpenFileLocationCommand}"
+                                  CommandParameter="{Binding PlacementTarget.SelectedItem, 
+                                                    RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                         <Separator/>
 
-                        <MenuItem Header="✏️ Редактировать метаданные" 
-                  Command="{Binding EditMetadataCommand}"
-                  CommandParameter="{Binding PlacementTarget.SelectedItem, 
-                                     RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-
-                        <MenuItem Header="➕ Добавить в очередь" 
-                  Command="{Binding AddToQueueCommand}"
-                  CommandParameter="{Binding PlacementTarget.SelectedItem, 
-                                     RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                        <MenuItem Header="✏️ Редактировать метаданные"  FontFamily="{ext:FontFamily ContextMenuListBox}" FontSize="{ext:FontSize ContextMenuListBox,12}"
+                                  Command="{Binding EditMetadataCommand}"
+                                  CommandParameter="{Binding PlacementTarget.SelectedItem, 
+                                                     RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                        <MenuItem Header="➕ Добавить в очередь"  FontFamily="{ext:FontFamily ContextMenuListBox}" FontSize="{ext:FontSize ContextMenuListBox,12}"
+                                  Command="{Binding AddToQueueCommand}"
+                                  CommandParameter="{Binding PlacementTarget.SelectedItem, 
+                                                     RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                     </ContextMenu>
                 </ListBox.ContextMenu>
 
@@ -340,11 +203,11 @@
                                 </TextBlock.Style>
                             </TextBlock>
                             <StackPanel Grid.Column="1">
-                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Text="{Binding Title}" FontFamily="{ext:FontFamily SongDescriptionInfo_LB}" FontSize="{ext:FontSize SongDescriptionInfo_LB,14}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                                 <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                                    <TextBlock Text="{Binding Info}" FontSize="11" Opacity="0.6" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text=" • " FontSize="11" Opacity="0.6"/>
-                                    <TextBlock Text="{Binding DurationSeconds, Converter={StaticResource TimeConv}}" FontSize="11" Opacity="0.6"/>
+                                    <TextBlock Text="{Binding Info}" FontFamily="{ext:FontFamily SongDescriptionInfo_LB}" FontSize="{ext:FontSize SongDescriptionInfo_LB,11}" Opacity="0.6" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock FontFamily="{ext:FontFamily SongDescriptionInfo_LB}" FontSize="{ext:FontSize SongDescriptionInfo_LB,11}" Opacity="0.6"/>
+                                    <TextBlock HorizontalAlignment="Right" TextAlignment="Right" Text="{Binding DurationSeconds, Converter={StaticResource TimeConv}}" FontFamily="{ext:FontFamily SongDescriptionInfo_LB}" FontSize="{ext:FontSize SongDescriptionInfo_LB,11}" Opacity="0.6"/>
                                 </StackPanel>
                             </StackPanel>
                         </Grid>
@@ -388,14 +251,16 @@
             <StackPanel Grid.Row="1" HorizontalAlignment="Center" MaxWidth="450">
                 <TextBlock Text="{Binding SelectedSong.Title}" 
                            Foreground="White" 
-                           FontSize="28" 
+                           FontSize="{ext:FontSize SongDescriptionInfo,28}"
+                           FontFamily="{ext:FontFamily SongDescriptionInfo}"
                            FontWeight="Bold"
                            TextAlignment="Center"
                            TextWrapping="Wrap"/>
 
                 <TextBlock Text="{Binding SelectedSong.Title_Romanized}" 
                            Foreground="#A0A0A0" 
-                           FontSize="15" 
+                           FontSize="{ext:FontSize SongDescriptionInfo,15}"
+                           FontFamily="{ext:FontFamily SongDescriptionInfo}"
                            FontStyle="Italic"
                            TextAlignment="Center"
                            Margin="0,4,0,0">
@@ -415,13 +280,15 @@
 
                 <TextBlock Text="{Binding SelectedSong.Info}" 
                            Foreground="#DDDDDD" 
-                           FontSize="16" 
+                           FontSize="{ext:FontSize SongDescriptionInfo,16}"
+                           FontFamily="{ext:FontFamily SongDescriptionInfo}"
                            TextAlignment="Center"
                            Margin="0,12,0,0"/>
 
                 <TextBlock Text="{Binding SelectedSong.Album}" 
                            Foreground="#888888" 
-                           FontSize="14" 
+                           FontSize="{ext:FontSize SongDescriptionInfo,14}"
+                           FontFamily="{ext:FontFamily SongDescriptionInfo}"
                            TextAlignment="Center"
                            Margin="0,4,0,0"/>
 
@@ -469,7 +336,8 @@
                     <TextBlock Grid.Column="0" 
                                Text="{Binding CurrentPositionSeconds, Converter={StaticResource TimeConv}, FallbackValue=0:00}" 
                                Foreground="{StaticResource FgTimer}" 
-                               FontSize="11" 
+                               FontSize="{ext:FontSize MainViewText,14}"
+                               FontFamily="{ext:FontFamily MainViewText}"
                                VerticalAlignment="Center"
                                HorizontalAlignment="Right"
                                Margin="0,0,10,0"/>
@@ -481,7 +349,8 @@
                     <TextBlock Grid.Column="2" 
                                Text="{Binding TotalDurationSeconds, Converter={StaticResource TimeConv}, FallbackValue=0:00}" 
                                Foreground="{StaticResource FgTimer}" 
-                               FontSize="11" 
+                               FontSize="{ext:FontSize MainViewText,14}"
+                               FontFamily="{ext:FontFamily MainViewText}"
                                VerticalAlignment="Center"
                                HorizontalAlignment="Left"
                                Margin="10,0,0,0"/>

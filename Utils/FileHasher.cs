@@ -25,7 +25,6 @@ namespace WpfApp14.Utils
                     0,
                     BASSFlag.BASS_STREAM_DECODE | BASSFlag.BASS_SAMPLE_FLOAT
                 );
-                Logger.Log($"[HASHER] streamHandle = {streamHandle}");
                 if (streamHandle == 0)
                 {
                     Logger.Error($"[HASHER] Failed to create decode stream for: {filePath}. BASS Error: {Bass.BASS_ErrorGetCode()}");

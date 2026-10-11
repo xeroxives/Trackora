@@ -4,6 +4,11 @@
              xmlns:local="clr-namespace:WpfApp14"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-        <ResourceDictionary Source="/Themes/Colors.xaml"/>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Themes/Colors.xaml"/>
+                <ResourceDictionary Source="/Themes/StylesMainPage.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

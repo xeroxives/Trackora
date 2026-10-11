@@ -71,8 +71,8 @@ public class MainVM : VM
 
     public MainVM()
     {
-		Debug.WriteLine($"\n\n==============================\nВерсия: {Environment.Version}");
-		Debug.WriteLine($"Описание: {System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription}\n==============================");
+        Logger.Log($"\n\n==============================\nВерсия: {Environment.Version}");
+		Logger.Log($"Описание: {System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription}\n==============================\n\n");
 
 
         MainPageCommand = new ButtonCommand(ToMainPage);
