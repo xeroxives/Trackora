@@ -13,6 +13,7 @@ using WpfApp14.Services;
 using WpfApp14.Utils;
 using WpfApp14.Views;
 using WpfApp14.Interfaces;
+using System.Windows;
 
 namespace WpfApp14.ViewModels
 {
@@ -38,7 +39,7 @@ namespace WpfApp14.ViewModels
 
                     if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
                     {
-                        _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds);
+                        _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds, SelectedSong);
                         Logger.Log($"[STATS] Saved {_currentTrackSeconds:F2}s for hash {_currentTrackHash.Substring(0, 8)}...");
                     }
                     _currentTrackSeconds = 0;
@@ -405,14 +406,20 @@ namespace WpfApp14.ViewModels
         private void EditMetadata(object param)
         {
             if (!(param is Song song)) return;
-            StatusText = $"Edit mode not implemented yet";
-            Logger.Log($"Edit requested for: {song.Title}");
+            //StatusText = $"Edit mode not implemented yet";
+            Logger.Log($"Edit requested for: {song.CuttedTitle(10)}");
+            EditMetadataWindow ew = new EditMetadataWindow(SelectedSong);
+            if(ew.ShowDialog() == true)
+            {
+                Logger.Log("Edit sucessful");
+            }
+            Logger.Log($"Edit {song.CuttedTitle(10)} interrupted");
         }
         private void AddToQueue(object param)
         {
             if (!(param is Song song)) return;
-            StatusText = $"Added '{song.Title}' to queue";
-            Logger.Log($"Add to queue requested: {song.Title}");
+            StatusText = $"Added '{song.CuttedTitle(10)}' to queue";
+            Logger.Log($"Add to queue requested: {song.CuttedTitle(10)}");
         }
 
         #endregion
@@ -630,7 +637,7 @@ namespace WpfApp14.ViewModels
         {
             if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
             {
-                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds);
+                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds, SelectedSong);
                 Logger.Log($"[STATS] Saved {_currentTrackSeconds:F2}s for hash {_currentTrackHash.Substring(0, 8)}...");
             }
             _currentTrackSeconds = 0;
@@ -662,7 +669,7 @@ namespace WpfApp14.ViewModels
         {
             if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
             {
-                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds);
+                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds, SelectedSong);
             }
             _currentTrackSeconds = 0;
 
@@ -679,7 +686,7 @@ namespace WpfApp14.ViewModels
         {
             if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
             {
-                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds);
+                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds, SelectedSong);
             }
             _currentTrackSeconds = 0;
 
@@ -696,7 +703,7 @@ namespace WpfApp14.ViewModels
         {
             if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
             {
-                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds);
+                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds, SelectedSong);
             }
             _currentTrackSeconds = 0;
 
@@ -748,7 +755,7 @@ namespace WpfApp14.ViewModels
         {
             if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
             {
-                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds);
+                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds, SelectedSong);
                 Logger.Log($"[STATS] Saved {_currentTrackSeconds:F2}s on cleanup for hash {_currentTrackHash.Substring(0, 8)}...");
             }
             _currentTrackSeconds = 0;

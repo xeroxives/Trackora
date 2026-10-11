@@ -4,10 +4,10 @@
         xmlns:vm="clr-namespace:WpfApp14.ViewModels"
         xmlns:views="clr-namespace:WpfApp14.Views"
         xmlns:svg="http://sharpvectors.codeplex.com/svgc/"
-        Title="Trackora" 
+        Title="Trackora"
         Height="650" Width="900"
         MinHeight="620" MinWidth="830"
-        Background="#121212">
+        Background="{StaticResource BgPrimary}">
 
     <Window.DataContext>
         <vm:MainVM/>
@@ -23,7 +23,7 @@
         </DataTemplate>
 
         <Style x:Key="IconButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Background" Value="{StaticResource SidebarBtnBg}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="8"/>
             <Setter Property="Cursor" Value="Hand"/>
@@ -38,17 +38,14 @@
                         </Border>
 
                         <ControlTemplate.Triggers>
-                            <!-- Hover эффект -->
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#2A2A2A"/>
+                                <Setter Property="Background" Value="{StaticResource SidebarBtnBgHover}"/>
                             </Trigger>
 
-                            <!-- Эффект нажатия -->
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="#3A3A3A"/>
+                                <Setter Property="Background" Value="{StaticResource SidebarBtnBgPressed}"/>
                             </Trigger>
-
-                            <!-- Неактивная кнопка -->
+                            
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Opacity" Value="0.5"/>
                             </Trigger>
@@ -68,7 +65,7 @@
         <Border x:Name="Sidebar" 
             Grid.Column="0" 
             Width="47"
-            Background="#181818">
+            Background="{StaticResource SidebarBorder}">
 
             <Border.Style>
                 <Style TargetType="Border">
@@ -107,7 +104,7 @@
                 </EventTrigger>
             </Border.Triggers>
 
-            <StackPanel Background="#181818" HorizontalAlignment="Center" Margin="5">
+            <StackPanel Background="{StaticResource SidebarBg}" HorizontalAlignment="Center" Margin="5">
                 <Button Command="{Binding MainPageCommand}" Style="{StaticResource IconButtonStyle}">
                     <svg:SvgViewbox Source="./menu.svg" Margin="5"/>
                 </Button>
