@@ -1,9 +1,12 @@
 <Solution>
   <Configurations>
+    <BuildType Name="Debug" />
+    <BuildType Name="Release" />
+    <BuildType Name="ReleaseMain" />
     <Platform Name="Any CPU" />
-    <Platform Name="x86" />
+    <Platform Name="x64" />
   </Configurations>
   <Project Path="WpfApp14.csproj" Id="18d4b649-03e9-4b92-91fc-228902a8d468">
-    <Platform Solution="*|x86" Project="x86" />
+    <Platform Solution="*|x64" Project="x64" />
   </Project>
 </Solution>

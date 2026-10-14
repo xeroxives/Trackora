@@ -33,6 +33,16 @@ namespace WpfApp14.Models
         public string BackgroundImagePath { get; set; } = "";
         public string Info { get; set; } = "";
         public string FilePathOrUri { get; set; } = "";
-        public int ListenedSeconds { get; set; } = 0;
+        public string FileHash { get; set; } = "";
+        public double ListenedSeconds { get; set; } = 0;
+        public int DefaultVolume { get; set; } = 100;
+        public string CuttedTitle(int o)
+        {
+            return Title.Substring(0, Math.Min(Title.Length, o));
+        }
+        public override string ToString()
+        {
+            return $"{Id,-3} | {Title.Substring(0, Math.Min(Title.Length, 10))}....";
+        }
     }
 }

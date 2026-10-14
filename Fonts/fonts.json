@@ -1,0 +1,18 @@
+[
+	{
+		"Context": "MainViewText",
+		"FontFile": ""
+	},
+	{
+		"Context": "SongDescriptionInfo",
+		"FontFile": ""
+	},
+	{
+		"Context": "SongDescriptionInfo_LB",
+		"FontFile": ""
+	},
+	{
+		"Context": "ContextMenuListBox",
+		"FontFile": ""
+	}
+]

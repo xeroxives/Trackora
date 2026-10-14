@@ -13,17 +13,63 @@ using WpfApp14.Services;
 using WpfApp14.Utils;
 using WpfApp14.Views;
 using WpfApp14.Interfaces;
+using System.Windows;
+using System.Threading.Tasks.Sources;
 
 namespace WpfApp14.ViewModels
 {
     public class MainPageVM : VM, I_PlayerVM
     {
+        #region Privates
+        private AudioService _audioService = new();
+        private bool _isPlaying = false;
+        private DispatcherTimer _progressTimer;
+        private readonly string _appDataFolder;
+        private bool _isSeeking = false;
+        private bool _isUserSeeking = false;
+        private bool _isUserSeekingFlag = false;
+        private double _lastKnownPosition = 0;
+        private PlaybackMode _playbackMode = PlaybackMode.Normal;
+        private Random _random = new();
+        private int _tickCounter = 0;
+        private bool _trackEndHandled = false;
+        private DateTime _lastTickTime;
+        private DBService _DBdataService = new();
+        private string _currentTrackHash;
+        private double _currentTrackSeconds;
+        private CancellationTokenSource _debounceCts;
+        private CancellationTokenSource _debounceCtsVol;
+        #endregion
+
         #region Getters
-        private ObservableCollection<Song> _songs = new ObservableCollection<Song>();
+        private ObservableCollection<Song> _songs = new();
         public ObservableCollection<Song> Songs
         {
             get => _songs;
             set { _songs = value; Notify(nameof(Songs)); }
+        }
+
+        private int _selectedSongVolume;
+        public int SelectedSongVolume
+        {
+            get=> _selectedSongVolume;
+            set
+            {
+                if (_selectedSongVolume == value) return;
+                if (SelectedSong == null) { Logger.Error($"[Volume]: SelectedSong = null"); return; }
+
+                _selectedSongVolume = value;
+                Notify(nameof(SelectedSongVolume));
+                SelectedSong.DefaultVolume = _selectedSongVolume;
+
+                _debounceCts?.Cancel();
+                _debounceCtsVol?.Cancel();
+                _debounceCts = new CancellationTokenSource();
+                _debounceCtsVol = new CancellationTokenSource();
+
+                _ = UpdateVolumeDBDebouncedAsync(_debounceCts.Token);
+                _ = UpdateVolumeDebouncedAsync(_debounceCtsVol.Token);
+            }
         }
 
         private Song _selectedSong;
@@ -34,16 +80,19 @@ namespace WpfApp14.ViewModels
             {
                 if (_selectedSong != value && value != null)
                 {
-                    Logger.Log($"[TRACK] Switching from '{_selectedSong?.Title}' to '{value.Title}'. Resetting position.");
+                    Logger.Log($"[TRACK] Switching from '{_selectedSong?.CuttedTitle(10)}' to '{value.CuttedTitle(10)}'. Resetting position.----------");
+                    Logger.Log($"[TRACK] hash: '{value.FileHash}'");
 
                     if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
                     {
-                        _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds);
+                        _DBdataService.AddListeningTime(_currentTrackSeconds, SelectedSong);
                         Logger.Log($"[STATS] Saved {_currentTrackSeconds:F2}s for hash {_currentTrackHash.Substring(0, 8)}...");
                     }
                     _currentTrackSeconds = 0;
-
                     _selectedSong = value;
+
+                    SelectedSongVolume = SelectedSong.DefaultVolume;
+
                     Notify(nameof(SelectedSong));
 
                     _lastKnownPosition = 0;
@@ -57,6 +106,7 @@ namespace WpfApp14.ViewModels
                         _lastTickTime = DateTime.UtcNow;
 
                         _audioService.Play(value.FilePathOrUri);
+                        _audioService.SetVolume(SelectedSongVolume/100f);
                         _isPlaying = true;
                         StatusText = $"Playing";
                         StartProgressTimer();
@@ -118,25 +168,6 @@ namespace WpfApp14.ViewModels
 
         public bool IsLoopActive => _playbackMode == PlaybackMode.Loop;
         public bool IsShuffleActive => _playbackMode == PlaybackMode.Shuffle;
-        #endregion
-
-        #region Privates
-        private AudioService _audioService = new AudioService();
-        private bool _isPlaying = false;
-        private DispatcherTimer _progressTimer;
-        private readonly string _appDataFolder;
-        private bool _isSeeking = false;
-        private bool _isUserSeeking = false;
-        private bool _isUserSeekingFlag = false;
-        private double _lastKnownPosition = 0;
-        private PlaybackMode _playbackMode = PlaybackMode.Normal;
-        private Random _random = new Random();
-        private int _tickCounter = 0;
-        private bool _trackEndHandled = false;
-        private DateTime _lastTickTime;
-        private ListeningStatsService _listeningStatsService = new ListeningStatsService();
-        private string _currentTrackHash;
-        private double _currentTrackSeconds;
         #endregion
 
         #region I_Command
@@ -233,12 +264,47 @@ namespace WpfApp14.ViewModels
             Loop,
             Shuffle
         }
+        private async Task UpdateVolumeDBDebouncedAsync(CancellationToken token)
+        {
+            try
+            {
+                await Task.Delay(500, token);
+                await _DBdataService.UpdateVolAsync(SelectedSong, token);
+            }
+            catch (OperationCanceledException)
+            {  }
+            catch (Exception ex)
+            {
+                Logger.Error($"[DEBOUNCE] DB Error: {ex.Message}");
+            }
+        }
+        private async Task UpdateVolumeDebouncedAsync(CancellationToken token)
+        {
+            try
+            {
+                await Task.Delay(10, token);
+                _audioService.SetVolume(SelectedSongVolume / 100f);
+            }
+            catch (OperationCanceledException)
+            { }
+            catch (Exception ex)
+            {
+                Logger.Error($"[DEBOUNCE] DB Error: {ex.Message}");
+            }
+        }
         #endregion
 
         #region Context Menu Logic
+        private void ReloadSongs(object o)
+        {
+            Debug.WriteLine("[Reload] Start");
+            Songs.Clear();
+            LoadFromAppData();
+            Notify(nameof(Songs));
+        }
         private void SaveToAppData(object param)
         {
-            if (!(param is Song song)) return;
+            if (param is not Song song) return;
 
             try
             {
@@ -305,32 +371,30 @@ namespace WpfApp14.ViewModels
 
                     try
                     {
-                        using (var tagFile = TagLib.File.Create(song.FilePathOrUri))
+                        using var tagFile = TagLib.File.Create(song.FilePathOrUri);
+                        if (tagFile.Tag.Pictures != null && tagFile.Tag.Pictures.Length > 0)
                         {
-                            if (tagFile.Tag.Pictures != null && tagFile.Tag.Pictures.Length > 0)
+                            var pic = tagFile.Tag.Pictures[0];
+
+                            string coversDir = Path.Combine(_appDataFolder, "Covers");
+                            if (!Directory.Exists(coversDir))
+                                Directory.CreateDirectory(coversDir);
+
+                            string coverExt = ".jpg";
+                            if (!string.IsNullOrEmpty(pic.MimeType))
                             {
-                                var pic = tagFile.Tag.Pictures[0];
-
-                                string coversDir = Path.Combine(_appDataFolder, "Covers");
-                                if (!Directory.Exists(coversDir))
-                                    Directory.CreateDirectory(coversDir);
-
-                                string coverExt = ".jpg";
-                                if (!string.IsNullOrEmpty(pic.MimeType))
-                                {
-                                    if (pic.MimeType.Contains("png")) coverExt = ".png";
-                                    else if (pic.MimeType.Contains("gif")) coverExt = ".gif";
-                                    else if (pic.MimeType.Contains("bmp")) coverExt = ".bmp";
-                                }
-
-                                string coverFileName = $"cover_{song.Id}{coverExt}";
-                                string coverFullPath = Path.Combine(coversDir, coverFileName);
-
-                                File.WriteAllBytes(coverFullPath, pic.Data.Data);
-                                song.BackgroundImagePath = coverFullPath;
-
-                                Logger.Log($"Cover saved: {coverFullPath}");
+                                if (pic.MimeType.Contains("png")) coverExt = ".png";
+                                else if (pic.MimeType.Contains("gif")) coverExt = ".gif";
+                                else if (pic.MimeType.Contains("bmp")) coverExt = ".bmp";
                             }
+
+                            string coverFileName = $"cover_{song.Id}{coverExt}";
+                            string coverFullPath = Path.Combine(coversDir, coverFileName);
+
+                            File.WriteAllBytes(coverFullPath, pic.Data.Data);
+                            song.BackgroundImagePath = coverFullPath;
+
+                            Logger.Log($"Cover saved: {coverFullPath}");
                         }
                     }
                     catch (Exception ex)
@@ -363,7 +427,7 @@ namespace WpfApp14.ViewModels
         }
         private void RemoveFromSession(object param)
         {
-            if (!(param is Song song)) return;
+            if (param is not Song song) return;
 
             if (SelectedSong == song)
             {
@@ -379,7 +443,7 @@ namespace WpfApp14.ViewModels
         }
         private void OpenFileLocation(object param)
         {
-            if (!(param is Song song)) return;
+            if (param is not Song song) return;
 
             string pathToOpen = song.IsSavedToAppData && !string.IsNullOrEmpty(song.AppDataFilePath)
                 ? song.AppDataFilePath
@@ -404,15 +468,21 @@ namespace WpfApp14.ViewModels
         }
         private void EditMetadata(object param)
         {
-            if (!(param is Song song)) return;
-            StatusText = $"Edit mode not implemented yet";
-            Logger.Log($"Edit requested for: {song.Title}");
+            if (param is not Song song) return;
+            //StatusText = $"Edit mode not implemented yet";
+            Logger.Log($"Edit requested for: {song.CuttedTitle(10)}");
+            EditMetadataWindow ew = new EditMetadataWindow(SelectedSong);
+            if(ew.ShowDialog() == true)
+            {
+                Logger.Log("Edit sucessful");
+            }
+            Logger.Log($"Edit {song.CuttedTitle(10)} interrupted");
         }
         private void AddToQueue(object param)
         {
-            if (!(param is Song song)) return;
-            StatusText = $"Added '{song.Title}' to queue";
-            Logger.Log($"Add to queue requested: {song.Title}");
+            if (param is not Song song) return;
+            StatusText = $"Added '{song.CuttedTitle(10)}' to queue";
+            Logger.Log($"Add to queue requested: {song.CuttedTitle(10)}");
         }
 
         #endregion
@@ -436,18 +506,16 @@ namespace WpfApp14.ViewModels
 
                 try
                 {
-                    using (var file = TagLib.File.Create(path))
-                    {
-                        if (!string.IsNullOrEmpty(file.Tag.Title))
-                            title = file.Tag.Title;
+                    using var file = TagLib.File.Create(path);
+                    if (!string.IsNullOrEmpty(file.Tag.Title))
+                        title = file.Tag.Title;
 
-                        if (file.Tag.Performers.Length > 0)
-                            artistName = file.Tag.Performers[0];
+                    if (file.Tag.Performers.Length > 0)
+                        artistName = file.Tag.Performers[0];
 
-                        if (file.Tag.Genres.Length > 0 && !string.IsNullOrEmpty(file.Tag.Genres[0]))
-                            genre = file.Tag.Genres[0];
-                        duration = file.Properties.Duration.TotalSeconds;
-                    }
+                    if (file.Tag.Genres.Length > 0 && !string.IsNullOrEmpty(file.Tag.Genres[0]))
+                        genre = file.Tag.Genres[0];
+                    duration = file.Properties.Duration.TotalSeconds;
                 }
                 catch (Exception ex)
                 {
@@ -462,9 +530,11 @@ namespace WpfApp14.ViewModels
                     Genre = genre,
                     DurationSeconds = duration,
                     Info = $"Artist: {artistName}",
-                    IsSavedToAppData = false
+                    IsSavedToAppData = false,
+                    FileHash = FileHasher.ComputePartialHash(path)
                 };
-
+                newSong.DefaultVolume = _DBdataService.GetVol(newSong);
+                newSong.ListenedSeconds = _DBdataService.GetListeningTime(newSong);
                 Songs.Add(newSong);
                 _lastKnownPosition = 0;
                 SelectedSong = newSong;
@@ -472,9 +542,9 @@ namespace WpfApp14.ViewModels
         }
         private void OpenUrlDialogAsync()
         {
-            UrlWindow w = new UrlWindow();
+            UrlWindow w = new();
             w.ShowDialog();
-            ReloadSongs();
+            ReloadSongs("");
         }
         private void TogglePlayPause()
         {
@@ -534,6 +604,7 @@ namespace WpfApp14.ViewModels
                 _lastKnownPosition = 0;
                 foreach (string filePath in files)
                 {
+                    Debug.WriteLine("\n\n==========================================================================================");
                     string ext = Path.GetExtension(filePath).ToLower();
                     if (!audioExtensions.Contains(ext)) continue;
 
@@ -546,35 +617,34 @@ namespace WpfApp14.ViewModels
 
                     try
                     {
-                        using (var file = TagLib.File.Create(filePath))
+                        using var file = TagLib.File.Create(filePath);
+
+                        if (!string.IsNullOrEmpty(file.Tag.Title))
+                            title = file.Tag.Title;
+
+                        if (file.Tag.Performers.Length > 0)
+                            artistName = file.Tag.Performers[0];
+
+                        if (file.Tag.Genres.Length > 0 && !string.IsNullOrEmpty(file.Tag.Genres[0]))
+                            genre = file.Tag.Genres[0];
+
+                        if (!string.IsNullOrEmpty(file.Tag.Album))
+                            album = file.Tag.Album;
+
+                        duration = file.Properties.Duration.TotalSeconds;
+
+                        if (file.Tag.Pictures.Length > 0)
                         {
-                            if (!string.IsNullOrEmpty(file.Tag.Title))
-                                title = file.Tag.Title;
+                            var pic = file.Tag.Pictures[0];
+                            string coverFileName = $"cover_{idCounter}.jpg";
+                            string coverFullPath = Path.Combine(_appDataFolder, "Covers", coverFileName);
 
-                            if (file.Tag.Performers.Length > 0)
-                                artistName = file.Tag.Performers[0];
+                            string coversDir = Path.Combine(_appDataFolder, "Covers");
+                            if (!Directory.Exists(coversDir))
+                                Directory.CreateDirectory(coversDir);
 
-                            if (file.Tag.Genres.Length > 0 && !string.IsNullOrEmpty(file.Tag.Genres[0]))
-                                genre = file.Tag.Genres[0];
-
-                            if (!string.IsNullOrEmpty(file.Tag.Album))
-                                album = file.Tag.Album;
-
-                            duration = file.Properties.Duration.TotalSeconds;
-
-                            if (file.Tag.Pictures.Length > 0)
-                            {
-                                var pic = file.Tag.Pictures[0];
-                                string coverFileName = $"cover_{idCounter}.jpg";
-                                string coverFullPath = Path.Combine(_appDataFolder, "Covers", coverFileName);
-
-                                string coversDir = Path.Combine(_appDataFolder, "Covers");
-                                if (!Directory.Exists(coversDir))
-                                    Directory.CreateDirectory(coversDir);
-
-                                System.IO.File.WriteAllBytes(coverFullPath, pic.Data.Data);
-                                coverPath = coverFullPath;
-                            }
+                            System.IO.File.WriteAllBytes(coverFullPath, pic.Data.Data);
+                            coverPath = coverFullPath;
                         }
                     }
                     catch (Exception ex)
@@ -593,11 +663,14 @@ namespace WpfApp14.ViewModels
                         Album = album,
                         DurationSeconds = duration,
                         Info = $"Artist: {artistName}",
-                        BackgroundImagePath = coverPath
+                        BackgroundImagePath = coverPath,
+                        FileHash = FileHasher.ComputePartialHash(filePath)
                     };
+                    song.DefaultVolume = _DBdataService.GetVol(song);
+                    song.ListenedSeconds = _DBdataService.GetListeningTime(song);
 
                     Songs.Add(song);
-                    Logger.Log($"Loaded from AppData: {title} ({filePath})");
+                    Logger.Log($"Loaded from AppData: {song.CuttedTitle(7)} ({filePath}); dv-{song.DefaultVolume}; LS-{song.ListenedSeconds};");
                 }
 
                 if (Songs.Count > 0)
@@ -630,7 +703,7 @@ namespace WpfApp14.ViewModels
         {
             if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
             {
-                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds);
+                _DBdataService.AddListeningTime(_currentTrackSeconds, SelectedSong);
                 Logger.Log($"[STATS] Saved {_currentTrackSeconds:F2}s for hash {_currentTrackHash.Substring(0, 8)}...");
             }
             _currentTrackSeconds = 0;
@@ -662,7 +735,7 @@ namespace WpfApp14.ViewModels
         {
             if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
             {
-                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds);
+                _DBdataService.AddListeningTime(_currentTrackSeconds, SelectedSong);
             }
             _currentTrackSeconds = 0;
 
@@ -679,7 +752,7 @@ namespace WpfApp14.ViewModels
         {
             if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
             {
-                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds);
+                _DBdataService.AddListeningTime(_currentTrackSeconds, SelectedSong);
             }
             _currentTrackSeconds = 0;
 
@@ -696,7 +769,7 @@ namespace WpfApp14.ViewModels
         {
             if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
             {
-                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds);
+                _DBdataService.AddListeningTime(_currentTrackSeconds, SelectedSong);
             }
             _currentTrackSeconds = 0;
 
@@ -722,12 +795,6 @@ namespace WpfApp14.ViewModels
             _currentTrackHash = FileHasher.ComputePartialHash(SelectedSong.FilePathOrUri);
             _lastTickTime = DateTime.UtcNow;
         }
-        private void ReloadSongs()
-        {
-            Songs.Clear();
-            LoadFromAppData();
-            Notify(nameof(Songs));
-        }
         #endregion
 
         #region Interfaces
@@ -748,7 +815,7 @@ namespace WpfApp14.ViewModels
         {
             if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
             {
-                _listeningStatsService.AddListeningTime(_currentTrackHash, _currentTrackSeconds);
+                _DBdataService.AddListeningTime(_currentTrackSeconds, SelectedSong);
                 Logger.Log($"[STATS] Saved {_currentTrackSeconds:F2}s on cleanup for hash {_currentTrackHash.Substring(0, 8)}...");
             }
             _currentTrackSeconds = 0;
@@ -771,13 +838,12 @@ namespace WpfApp14.ViewModels
             PlayNextCommand = new ButtonCommand(PlayNextTrack);
             PlayPrevCommand = new ButtonCommand(PlayPrevTrack);
 
-
+            ReloadSongsCommand = new ButtonCommand(ReloadSongs);
             OpenFileCommand = new ButtonCommand(OpenFileDialog);
             OpenUrlCommand = new ButtonCommand(OpenUrlDialogAsync);
             ToggleLoopCommand = new ButtonCommand(ToggleLoop);
             ToggleShuffleCommand = new ButtonCommand(ToggleShuffle);
             SaveToAppDataCommand = new ButtonCommand(SaveToAppData);
-            ReloadSongsCommand = new ButtonCommand(ReloadSongs);
             RemoveFromSessionCommand = new ButtonCommand(RemoveFromSession);
             OpenFileLocationCommand = new ButtonCommand(OpenFileLocation);
             EditMetadataCommand = new ButtonCommand(EditMetadata);
