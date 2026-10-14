@@ -1,4 +1,7 @@
-﻿using System;
+﻿using SharpVectors.Converters;
+using SharpVectors.Dom.Svg;
+using System;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -22,6 +25,46 @@ namespace WpfApp14
             Loaded += MainWindow_Loaded;
         }
 
+        private void BtnMinimize_Click(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState.Minimized;
+        }
+
+        private void BtnMaximize_Click(object sender, RoutedEventArgs e)
+        {
+            WindowState = WindowState == WindowState.Maximized
+                ? WindowState.Normal
+                : WindowState.Maximized;
+        }
+
+        private void BtnClose_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
+        private void SetButtonSvg(Button button, string svgPath)
+        {
+
+            SvgViewbox s = new SvgViewbox();
+            s.Source = new Uri(svgPath,UriKind.Relative);
+            button.Content = s;
+        }
+        private void MainWindow_StateChanged(object sender, EventArgs e)
+        {
+            if (BtnMaximize != null)
+            {
+                Debug.WriteLine("Change size");
+                string svgPath = WindowState == WindowState.Maximized
+                    ? "./Assets/windowed_btn_1.svg"
+                    : "./Assets/windowed_btn_2.svg";
+
+                string tooltip = WindowState == WindowState.Maximized
+                    ? "Свернуть в окно"
+                    : "Развернуть";
+
+                SetButtonSvg(BtnMaximize, svgPath);
+                BtnMaximize.ToolTip = tooltip;
+            }
+        }
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             _progressSlider = FindChild<Slider>(this);

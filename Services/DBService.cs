@@ -45,8 +45,9 @@ namespace WpfApp14.Services
         #endregion
 
         #region ListeningTime
-        public void AddListeningTime(string fileHash, double seconds, Song s)
+        public void AddListeningTime(double seconds, Song s)
         {
+            string fileHash = s.FileHash;
             if (!_isInitialized || string.IsNullOrEmpty(fileHash) || seconds <= 0){
 				Debug.WriteLine($"[ConnSQL] Start Func | isInit: {_isInitialized} | fh: {fileHash} | sec: {seconds}");
 				return;
@@ -82,9 +83,9 @@ namespace WpfApp14.Services
             });
         }
 
-        public double GetListeningTime(string fileHash)
+        public double GetListeningTime(Song s)
         {
-            if (!_isInitialized || string.IsNullOrEmpty(fileHash))
+            if (!_isInitialized || string.IsNullOrEmpty(s.FileHash))
                 return 0;
 
             try
@@ -94,7 +95,7 @@ namespace WpfApp14.Services
 
                 using var command = connection.CreateCommand();
                 command.CommandText = "SELECT TotalSeconds FROM ListeningStats WHERE FileHash = @hash;";
-                command.Parameters.AddWithValue("@hash", fileHash);
+                command.Parameters.AddWithValue("@hash", s.FileHash);
 
                 var result = command.ExecuteScalar();
                 return result != null ? Convert.ToDouble(result) : 0;
@@ -146,47 +147,51 @@ namespace WpfApp14.Services
         #endregion
 
         #region VolumeDB
-        public void UpdateVol(string fileHash, int data, Song s)
+        public async Task UpdateVolAsync(Song s, CancellationToken cancellationToken = default)
         {
-            if (!_isInitialized || string.IsNullOrEmpty(fileHash) || data <= 0)
+            if (!_isInitialized || string.IsNullOrEmpty(s.FileHash) || s.DefaultVolume <= 0)
             {
-                Debug.WriteLine($"[VOLUME-DB] Start Func | isInit: {_isInitialized} | fh: {fileHash} | data: {data}");
+                Logger.Log($"[VOLUME-DB] Start Func | isInit: {_isInitialized} | fh: {s.FileHash} | data: {s.DefaultVolume}");
                 return;
             }
 
-
-            Task.Run(() =>
+            Logger.Log($"[VOLUME-DB] Start-AsyncTask");
+            try
             {
-                Debug.WriteLine($"[VOLUME-DB] Start-Task");
-                try
-                {
-                    Debug.WriteLine($"[VOLUME-DB] Try");
-                    using var connection = new SqliteConnection(_connectionString);
-                    connection.Open();
+                Logger.Log($"[VOLUME-DB] Try");
 
-                    Debug.WriteLine($"[VOLUME-DB] open: {connection}");
+                using var connection = new SqliteConnection(_connectionString);
+                await connection.OpenAsync(cancellationToken);
+                using var command = connection.CreateCommand();
+                command.CommandText = @"
+                    INSERT INTO Volumes (Title, FileHash, Volume)
+                    VALUES (@title, @hash, @data)
+                    ON CONFLICT(FileHash) DO UPDATE
+                        SET Volume = @data, Title = @title;";
 
-                    using var command = connection.CreateCommand();
-                    command.CommandText = @"
-                                INSERT INTO Volumes (Title, FileHash, Volume)
-                                VALUES (@title, @hash, @data)
-                                ON CONFLICT(FileHash) DO UPDATE
-                                    SET Volume = @data, Title = @title;";
-                    command.Parameters.AddWithValue("@hash", fileHash);
-                    command.Parameters.AddWithValue("@data", data);
-                    command.Parameters.AddWithValue("@title", s.Title);
-                    Debug.WriteLine($"[VOLUME-DB] exec: {command.ExecuteNonQuery()}");
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"[VOLUME-DB] Failed to save listening time: {ex.Message}");
-                }
-            });
+                command.Parameters.AddWithValue("@hash", s.FileHash);
+                command.Parameters.AddWithValue("@data", s.DefaultVolume);
+                command.Parameters.AddWithValue("@title", s.Title);
+
+                int rowsAffected = await command.ExecuteNonQueryAsync(cancellationToken);
+
+                Logger.Log($"[VOLUME-DB] exec: {rowsAffected}: |{s.FileHash}|{s.DefaultVolume}|{s.CuttedTitle(10)}|");
+            }
+            catch (OperationCanceledException)
+            {
+                Logger.Log("[VOLUME-DB] Operation was canceled by debounce.");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"[VOLUME-DB] Failed to save volume: {ex.Message}");
+                // В реальном приложении здесь лучше использовать ILogger 
+                // или пробрасывать исключение дальше, а не просто глотать его.
+            }
         }
-        public int GetVol(string fileHash)
+        public int GetVol(Song s)
         {
-            if (!_isInitialized || string.IsNullOrEmpty(fileHash))
-                return 0;
+            if (!_isInitialized || string.IsNullOrEmpty(s.FileHash))
+                return 100;
 
             try
             {
@@ -195,15 +200,14 @@ namespace WpfApp14.Services
 
                 using var command = connection.CreateCommand();
                 command.CommandText = "SELECT Volume FROM Volumes WHERE FileHash = @hash;";
-                command.Parameters.AddWithValue("@hash", fileHash);
+                command.Parameters.AddWithValue("@hash", s.FileHash);
 
                 var result = command.ExecuteScalar();
-                Debug.WriteLine($"[VOLUME-DB] Result: {result}");
                 return result != null ? Convert.ToInt32(result) : 100;
             }
             catch (Exception ex)
             {
-                Logger.Error($"[VOLUME-DB] Failed to get time: {ex.Message}");
+                Logger.Error($"[VOLUME-DB] Failed to get volume: {ex.Message}");
                 return 100;
             }
         }

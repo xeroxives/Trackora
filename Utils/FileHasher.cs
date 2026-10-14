@@ -53,7 +53,7 @@ namespace WpfApp14.Utils
                     byte[] hashBytes = sha256.ComputeHash(combinedBuffer);
                     string base64Hash = Convert.ToBase64String(hashBytes);
 
-                    Logger.Log($"[HASHER] Audio hash computed for: {Path.GetFileName(filePath)} -> {base64Hash.Substring(0, 12)}...");
+                    Logger.Log($"[HASHER1] Audio hash computed for: {Path.GetFileName(filePath)} -> {base64Hash.Substring(0, 12)}...");
                     return base64Hash;
                 }
             }

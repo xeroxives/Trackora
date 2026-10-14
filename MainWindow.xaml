@@ -4,14 +4,24 @@
         xmlns:vm="clr-namespace:WpfApp14.ViewModels"
         xmlns:views="clr-namespace:WpfApp14.Views"
         xmlns:svg="http://sharpvectors.codeplex.com/svgc/"
-        Title="Trackora"
+        Title="TrackoraMusic" StateChanged="MainWindow_StateChanged"
         Height="650" Width="900"
         MinHeight="620" MinWidth="830"
         Background="{StaticResource BgPrimary}">
 
+    
     <Window.DataContext>
         <vm:MainVM/>
     </Window.DataContext>
+
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="32"
+                      ResizeBorderThickness="6"
+                      GlassFrameThickness="0"
+                      CornerRadius="0"
+                      UseAeroCaptionButtons="False"/>
+    </WindowChrome.WindowChrome>
 
     <Window.Resources>
         
@@ -21,103 +31,114 @@
         <DataTemplate DataType="{x:Type vm:SettingsVM}">
             <views:SettingsPage/>
         </DataTemplate>
-
-        <Style x:Key="IconButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="{StaticResource SidebarBtnBg}"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="8"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
-                                Padding="{TemplateBinding Padding}"
-                                CornerRadius="4">
-                            <ContentPresenter HorizontalAlignment="Center" 
-                                              VerticalAlignment="Center"/>
-                        </Border>
-
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="{StaticResource SidebarBtnBgHover}"/>
-                            </Trigger>
-
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="{StaticResource SidebarBtnBgPressed}"/>
-                            </Trigger>
-                            
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Opacity" Value="0.5"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
     </Window.Resources>
-    
+
     <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="49"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="32"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
 
-        <Border x:Name="Sidebar" 
-            Grid.Column="0" 
-            Width="47"
-            Background="{StaticResource SidebarBorder}">
+        <!-- ============ TITLE BAR ============ -->
+        <Border Grid.Row="0" Background="{StaticResource TitleBarBG}" BorderBrush="{StaticResource TitleBarBorder}" BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-            <Border.Style>
-                <Style TargetType="Border">
-                    <Setter Property="Width" Value="47"/>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
+                    <TextBlock Text="Trackora" Foreground="{StaticResource TitleBarTitleColor}" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                </StackPanel>
 
-                    <Style.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Width" Value="49"/>
-                        </Trigger>
-                    </Style.Triggers>
-                </Style>
-            </Border.Style>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" WindowChrome.IsHitTestVisibleInChrome="True">
+                    <!-- Minimize -->
+                    <Button x:Name="BtnMinimize" Width="40" Height="28" Style="{StaticResource IconButtonStyle}"
+                        Click="BtnMinimize_Click" ToolTip="Свернуть">
+                        <svg:SvgViewbox Source="./Assets/minimize_btn.svg"/>
+                    </Button>
 
-            <!-- Плавная анимация через EventTrigger -->
-            <Border.Triggers>
-                <EventTrigger RoutedEvent="MouseEnter">
-                    <BeginStoryboard>
-                        <Storyboard>
-                            <DoubleAnimation 
-                            Storyboard.TargetProperty="Width"
-                            To="49"
-                            Duration="0:0:0.15"/>
-                        </Storyboard>
-                    </BeginStoryboard>
-                </EventTrigger>
+                    <!-- Maximize / Restore -->
+                    <Button x:Name="BtnMaximize" Width="40" Height="28"
+                        Click="BtnMaximize_Click" ToolTip="Развернуть" Style="{StaticResource IconButtonStyle}">
+                        <svg:SvgViewbox Source="./Assets/windowed_btn_2.svg"/>
+                    </Button>
 
-                <EventTrigger RoutedEvent="MouseLeave">
-                    <BeginStoryboard>
-                        <Storyboard>
-                            <DoubleAnimation 
-                            Storyboard.TargetProperty="Width"
-                            To="47"
-                            Duration="0:0:0.15"/>
-                        </Storyboard>
-                    </BeginStoryboard>
-                </EventTrigger>
-            </Border.Triggers>
 
-            <StackPanel Background="{StaticResource SidebarBg}" HorizontalAlignment="Center" Margin="5">
-                <Button Command="{Binding MainPageCommand}" Style="{StaticResource IconButtonStyle}">
-                    <svg:SvgViewbox Source="./menu.svg" Margin="5"/>
-                </Button>
-                <Button Command="{Binding SettingsCommand}" Style="{StaticResource IconButtonStyle}">
-                    <svg:SvgViewbox Source="./settings.svg"  Margin="5"/>
-                </Button>
-                <Button Command="{Binding StatsCommand}" Style="{StaticResource IconButtonStyle}">
-                    <svg:SvgViewbox Source="./stats.svg"  Margin="4.5"/>
-                </Button>
-            </StackPanel>
+                    <!-- Close -->
+                    <Button x:Name="BtnClose" Width="40" Height="28"
+                        Click="BtnClose_Click" ToolTip="Закрыть" Style="{StaticResource IconButtonStyle}">
+                        <svg:SvgViewbox Source="./Assets/close_btn.svg"/>
+                    </Button>
+                </StackPanel>
+            </Grid>
         </Border>
 
-        <ContentControl Grid.Column="1" Content="{Binding CurrentVM}" />
+        <!-- Window Content -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="49"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
+            <Border x:Name="Sidebar" 
+			Grid.Column="0" 
+			Width="47"
+			Background="{StaticResource SidebarBorder}">
+
+                <Border.Style>
+                    <Style TargetType="Border">
+                        <Setter Property="Width" Value="47"/>
+
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Width" Value="49"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Border.Style>
+
+                <!-- Плавная анимация через EventTrigger -->
+                <Border.Triggers>
+                    <EventTrigger RoutedEvent="MouseEnter">
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation 
+							Storyboard.TargetProperty="Width"
+							To="49"
+							Duration="0:0:0.15"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </EventTrigger>
+
+                    <EventTrigger RoutedEvent="MouseLeave">
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation 
+							Storyboard.TargetProperty="Width"
+							To="47"
+							Duration="0:0:0.15"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </EventTrigger>
+                </Border.Triggers>
+
+                <StackPanel Background="{StaticResource SidebarBg}" HorizontalAlignment="Center" Margin="5">
+                    <Button Command="{Binding MainPageCommand}" Style="{StaticResource IconButtonStyle}">
+                        <svg:SvgViewbox Source="./Assets/menu.svg" Margin="5"/>
+                    </Button>
+                    <Button Command="{Binding SettingsCommand}" Style="{StaticResource IconButtonStyle}">
+                        <svg:SvgViewbox Source="./Assets/settings.svg"  Margin="5"/>
+                    </Button>
+                    <Button Command="{Binding StatsCommand}" Style="{StaticResource IconButtonStyle}">
+                        <svg:SvgViewbox Source="./Assets/stats.svg"  Margin="4.5"/>
+                    </Button>
+                </StackPanel>
+            </Border>
+
+            <ContentControl Grid.Column="1" Content="{Binding CurrentVM}" />
+
+        </Grid>
     </Grid>
+
 </Window>

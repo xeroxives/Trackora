@@ -14,17 +14,62 @@ using WpfApp14.Utils;
 using WpfApp14.Views;
 using WpfApp14.Interfaces;
 using System.Windows;
+using System.Threading.Tasks.Sources;
 
 namespace WpfApp14.ViewModels
 {
     public class MainPageVM : VM, I_PlayerVM
     {
+        #region Privates
+        private AudioService _audioService = new();
+        private bool _isPlaying = false;
+        private DispatcherTimer _progressTimer;
+        private readonly string _appDataFolder;
+        private bool _isSeeking = false;
+        private bool _isUserSeeking = false;
+        private bool _isUserSeekingFlag = false;
+        private double _lastKnownPosition = 0;
+        private PlaybackMode _playbackMode = PlaybackMode.Normal;
+        private Random _random = new();
+        private int _tickCounter = 0;
+        private bool _trackEndHandled = false;
+        private DateTime _lastTickTime;
+        private DBService _DBdataService = new();
+        private string _currentTrackHash;
+        private double _currentTrackSeconds;
+        private CancellationTokenSource _debounceCts;
+        private CancellationTokenSource _debounceCtsVol;
+        #endregion
+
         #region Getters
-        private ObservableCollection<Song> _songs = new ObservableCollection<Song>();
+        private ObservableCollection<Song> _songs = new();
         public ObservableCollection<Song> Songs
         {
             get => _songs;
             set { _songs = value; Notify(nameof(Songs)); }
+        }
+
+        private int _selectedSongVolume;
+        public int SelectedSongVolume
+        {
+            get=> _selectedSongVolume;
+            set
+            {
+                if (_selectedSongVolume == value) return;
+                if (SelectedSong == null) { Logger.Error($"[Volume]: SelectedSong = null"); return; }
+
+                _selectedSongVolume = value;
+                Notify(nameof(SelectedSongVolume));
+                SelectedSong.DefaultVolume = _selectedSongVolume;
+
+                _debounceCts?.Cancel();
+                _debounceCtsVol?.Cancel();
+                _debounceCts = new CancellationTokenSource();
+                _debounceCtsVol = new CancellationTokenSource();
+
+                _ = UpdateVolumeDBDebouncedAsync(_debounceCts.Token);
+                _ = UpdateVolumeDebouncedAsync(_debounceCtsVol.Token);
+            }
         }
 
         private Song _selectedSong;
@@ -40,12 +85,14 @@ namespace WpfApp14.ViewModels
 
                     if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
                     {
-                        _DBdataService.AddListeningTime(_currentTrackHash, _currentTrackSeconds, SelectedSong);
+                        _DBdataService.AddListeningTime(_currentTrackSeconds, SelectedSong);
                         Logger.Log($"[STATS] Saved {_currentTrackSeconds:F2}s for hash {_currentTrackHash.Substring(0, 8)}...");
                     }
                     _currentTrackSeconds = 0;
-
                     _selectedSong = value;
+
+                    SelectedSongVolume = SelectedSong.DefaultVolume;
+
                     Notify(nameof(SelectedSong));
 
                     _lastKnownPosition = 0;
@@ -59,6 +106,7 @@ namespace WpfApp14.ViewModels
                         _lastTickTime = DateTime.UtcNow;
 
                         _audioService.Play(value.FilePathOrUri);
+                        _audioService.SetVolume(SelectedSongVolume/100f);
                         _isPlaying = true;
                         StatusText = $"Playing";
                         StartProgressTimer();
@@ -120,25 +168,6 @@ namespace WpfApp14.ViewModels
 
         public bool IsLoopActive => _playbackMode == PlaybackMode.Loop;
         public bool IsShuffleActive => _playbackMode == PlaybackMode.Shuffle;
-        #endregion
-
-        #region Privates
-        private AudioService _audioService = new();
-        private bool _isPlaying = false;
-        private DispatcherTimer _progressTimer;
-        private readonly string _appDataFolder;
-        private bool _isSeeking = false;
-        private bool _isUserSeeking = false;
-        private bool _isUserSeekingFlag = false;
-        private double _lastKnownPosition = 0;
-        private PlaybackMode _playbackMode = PlaybackMode.Normal;
-        private Random _random = new();
-        private int _tickCounter = 0;
-        private bool _trackEndHandled = false;
-        private DateTime _lastTickTime;
-        private DBService _DBdataService = new();
-        private string _currentTrackHash;
-        private double _currentTrackSeconds;
         #endregion
 
         #region I_Command
@@ -234,6 +263,34 @@ namespace WpfApp14.ViewModels
             Normal,
             Loop,
             Shuffle
+        }
+        private async Task UpdateVolumeDBDebouncedAsync(CancellationToken token)
+        {
+            try
+            {
+                await Task.Delay(500, token);
+                await _DBdataService.UpdateVolAsync(SelectedSong, token);
+            }
+            catch (OperationCanceledException)
+            {  }
+            catch (Exception ex)
+            {
+                Logger.Error($"[DEBOUNCE] DB Error: {ex.Message}");
+            }
+        }
+        private async Task UpdateVolumeDebouncedAsync(CancellationToken token)
+        {
+            try
+            {
+                await Task.Delay(10, token);
+                _audioService.SetVolume(SelectedSongVolume / 100f);
+            }
+            catch (OperationCanceledException)
+            { }
+            catch (Exception ex)
+            {
+                Logger.Error($"[DEBOUNCE] DB Error: {ex.Message}");
+            }
         }
         #endregion
 
@@ -474,11 +531,10 @@ namespace WpfApp14.ViewModels
                     DurationSeconds = duration,
                     Info = $"Artist: {artistName}",
                     IsSavedToAppData = false,
-                    FileHash = FileHasher.ComputePartialHash(path),
-                    DefaultVolume = _DBdataService.GetVol(FileHasher.ComputePartialHash(path)),
-                    ListenedSeconds = _DBdataService.GetListeningTime(FileHasher.ComputePartialHash(path))
+                    FileHash = FileHasher.ComputePartialHash(path)
                 };
-
+                newSong.DefaultVolume = _DBdataService.GetVol(newSong);
+                newSong.ListenedSeconds = _DBdataService.GetListeningTime(newSong);
                 Songs.Add(newSong);
                 _lastKnownPosition = 0;
                 SelectedSong = newSong;
@@ -548,7 +604,7 @@ namespace WpfApp14.ViewModels
                 _lastKnownPosition = 0;
                 foreach (string filePath in files)
                 {
-                    Logger.Log($"[LoadFromAppdata] str {files}");
+                    Debug.WriteLine("\n\n==========================================================================================");
                     string ext = Path.GetExtension(filePath).ToLower();
                     if (!audioExtensions.Contains(ext)) continue;
 
@@ -608,13 +664,13 @@ namespace WpfApp14.ViewModels
                         DurationSeconds = duration,
                         Info = $"Artist: {artistName}",
                         BackgroundImagePath = coverPath,
-                        FileHash = FileHasher.ComputePartialHash(filePath),
-                        DefaultVolume = _DBdataService.GetVol(FileHasher.ComputePartialHash(filePath)),
-                        ListenedSeconds = _DBdataService.GetListeningTime(FileHasher.ComputePartialHash(filePath))
+                        FileHash = FileHasher.ComputePartialHash(filePath)
                     };
+                    song.DefaultVolume = _DBdataService.GetVol(song);
+                    song.ListenedSeconds = _DBdataService.GetListeningTime(song);
 
                     Songs.Add(song);
-                    Logger.Log($"Loaded from AppData: {title} ({filePath})");
+                    Logger.Log($"Loaded from AppData: {song.CuttedTitle(7)} ({filePath}); dv-{song.DefaultVolume}; LS-{song.ListenedSeconds};");
                 }
 
                 if (Songs.Count > 0)
@@ -647,7 +703,7 @@ namespace WpfApp14.ViewModels
         {
             if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
             {
-                _DBdataService.AddListeningTime(_currentTrackHash, _currentTrackSeconds, SelectedSong);
+                _DBdataService.AddListeningTime(_currentTrackSeconds, SelectedSong);
                 Logger.Log($"[STATS] Saved {_currentTrackSeconds:F2}s for hash {_currentTrackHash.Substring(0, 8)}...");
             }
             _currentTrackSeconds = 0;
@@ -679,7 +735,7 @@ namespace WpfApp14.ViewModels
         {
             if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
             {
-                _DBdataService.AddListeningTime(_currentTrackHash, _currentTrackSeconds, SelectedSong);
+                _DBdataService.AddListeningTime(_currentTrackSeconds, SelectedSong);
             }
             _currentTrackSeconds = 0;
 
@@ -696,7 +752,7 @@ namespace WpfApp14.ViewModels
         {
             if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
             {
-                _DBdataService.AddListeningTime(_currentTrackHash, _currentTrackSeconds, SelectedSong);
+                _DBdataService.AddListeningTime(_currentTrackSeconds, SelectedSong);
             }
             _currentTrackSeconds = 0;
 
@@ -713,7 +769,7 @@ namespace WpfApp14.ViewModels
         {
             if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
             {
-                _DBdataService.AddListeningTime(_currentTrackHash, _currentTrackSeconds, SelectedSong);
+                _DBdataService.AddListeningTime(_currentTrackSeconds, SelectedSong);
             }
             _currentTrackSeconds = 0;
 
@@ -759,7 +815,7 @@ namespace WpfApp14.ViewModels
         {
             if (!string.IsNullOrEmpty(_currentTrackHash) && _currentTrackSeconds > 0)
             {
-                _DBdataService.AddListeningTime(_currentTrackHash, _currentTrackSeconds, SelectedSong);
+                _DBdataService.AddListeningTime(_currentTrackSeconds, SelectedSong);
                 Logger.Log($"[STATS] Saved {_currentTrackSeconds:F2}s on cleanup for hash {_currentTrackHash.Substring(0, 8)}...");
             }
             _currentTrackSeconds = 0;

@@ -1,6 +1,8 @@
-﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <!-- ============================== -->
+    <!-- ====== Main Page Styles ====== -->
+    <!-- ============================== -->
     <Style TargetType="Button" x:Key="ControlButtonStyle">
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Foreground" Value="#B3B3B3"/>
@@ -17,7 +19,7 @@
         </Style.Triggers>
     </Style>
 
-    <!-- Play/Pause Style -->
+    <!-- ===== Play/Pause Style ===== -->
     <Style TargetType="Button" x:Key="PlayButtonStyle" BasedOn="{StaticResource ControlButtonStyle}">
         <Setter Property="Background" Value="{StaticResource BgButtonPlay}"/>
         <Setter Property="Foreground" Value="{StaticResource FgButtonPlay}"/>
@@ -140,10 +142,123 @@
     </Style>
 
 
-	<!-- ============================================= -->
-	<!--  КНОПКИ-СТРЕЛКИ (вверх / вниз)                -->
-	<!-- ============================================= -->
-	<Style x:Key="ScrollBarArrowButton" TargetType="{x:Type RepeatButton}">
+    <!-- ===== Volume Slider ===== -->
+    <Style x:Key="VolumeSliderStyle" TargetType="Slider">
+        <Style.Resources>
+            <Style x:Key="VolumeEmptyTrack" TargetType="RepeatButton">
+                <Setter Property="OverridesDefaultStyle" Value="True"/>
+                <Setter Property="IsTabStop" Value="False"/>
+                <Setter Property="Focusable" Value="False"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="RepeatButton">
+                            <Border Background="Transparent" VerticalAlignment="Center" Height="4">
+                                <Rectangle RadiusX="2" RadiusY="2" Height="4"
+                                       Fill="{StaticResource VolumeTrackBrush}"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="VolumeFilledTrack" TargetType="RepeatButton">
+                <Setter Property="OverridesDefaultStyle" Value="True"/>
+                <Setter Property="IsTabStop" Value="False"/>
+                <Setter Property="Focusable" Value="False"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="RepeatButton">
+                            <Border Background="Transparent" VerticalAlignment="Center" Height="4">
+                                <Rectangle RadiusX="2" RadiusY="2" Height="4"
+                                       Fill="{StaticResource VolumeFillBrush}">
+                                    <Rectangle.Effect>
+                                        <DropShadowEffect BlurRadius="5" ShadowDepth="0" Opacity="0.7"
+                                                      Color="{StaticResource VolumeGlowColor}"/>
+                                    </Rectangle.Effect>
+                                </Rectangle>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <Style x:Key="VolumeThumb" TargetType="Thumb">
+                <Setter Property="OverridesDefaultStyle" Value="True"/>
+                <Setter Property="Height" Value="16"/>
+                <Setter Property="Width" Value="16"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Thumb">
+                            <Grid RenderTransformOrigin="0.5,0.5">
+                                <Grid.RenderTransform>
+                                    <ScaleTransform x:Name="ThumbScale" ScaleX="1" ScaleY="1"/>
+                                </Grid.RenderTransform>
+                                <Ellipse Width="16" Height="16"
+                                     Fill="{StaticResource VolumeThumbBrush}">
+                                    <Ellipse.Effect>
+                                        <DropShadowEffect BlurRadius="8" ShadowDepth="0" Opacity="0.9"
+                                                      Color="{StaticResource VolumeAccentColor}"/>
+                                    </Ellipse.Effect>
+                                </Ellipse>
+                                <Ellipse Width="6" Height="6"
+                                     HorizontalAlignment="Center" VerticalAlignment="Center"
+                                     Fill="{StaticResource VolumeAccentBrush}"/>
+                            </Grid>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Trigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="ThumbScale"
+                                                             Storyboard.TargetProperty="ScaleX" To="1.2" Duration="0:0:0.15"/>
+                                                <DoubleAnimation Storyboard.TargetName="ThumbScale"
+                                                             Storyboard.TargetProperty="ScaleY" To="1.2" Duration="0:0:0.15"/>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.EnterActions>
+                                    <Trigger.ExitActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetName="ThumbScale"
+                                                             Storyboard.TargetProperty="ScaleX" To="1" Duration="0:0:0.15"/>
+                                                <DoubleAnimation Storyboard.TargetName="ThumbScale"
+                                                             Storyboard.TargetProperty="ScaleY" To="1" Duration="0:0:0.15"/>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </Trigger.ExitActions>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </Style.Resources>
+
+        <Setter Property="Height" Value="20"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Slider">
+                    <Grid VerticalAlignment="Center" Background="Transparent">
+                        <Track x:Name="PART_Track" VerticalAlignment="Center">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Style="{StaticResource VolumeFilledTrack}" Command="Slider.DecreaseLarge"/>
+                            </Track.DecreaseRepeatButton>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Style="{StaticResource VolumeEmptyTrack}" Command="Slider.IncreaseLarge"/>
+                            </Track.IncreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb Style="{StaticResource VolumeThumb}"/>
+                            </Track.Thumb>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- ========== КНОПКИ-СТРЕЛКИ (вверх / вниз) ========== -->
+    <Style x:Key="ScrollBarArrowButton" TargetType="{x:Type RepeatButton}">
 		<Setter Property="SnapsToDevicePixels" Value="True"/>
 		<Setter Property="OverridesDefaultStyle" Value="True"/>
 		<Setter Property="Focusable" Value="False"/>
@@ -278,9 +393,7 @@
 		</Setter>
 	</Style>
 
-	<!-- ============================================= -->
-	<!--  THUMB (ползунок)                             -->
-	<!-- ============================================= -->
+    <!-- ========== THUMB (ползунок) ========== -->
 	<Style x:Key="ScrollBarThumb" TargetType="{x:Type Thumb}">
 		<Setter Property="SnapsToDevicePixels" Value="True"/>
 		<Setter Property="OverridesDefaultStyle" Value="True"/>

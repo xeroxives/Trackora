@@ -27,10 +27,11 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
         <!-- ================= PlayList ================= -->
-        <DockPanel Grid.Column="0" Grid.RowSpan="2" Background="#000000">
+        <DockPanel Grid.Column="0" Grid.RowSpan="3" Background="#000000">
             <StackPanel DockPanel.Dock="Top" Margin="20,20,20,10">
                 <Grid Margin="0,0,0,15">
                     <Grid.ColumnDefinitions>
@@ -106,7 +107,7 @@
                 </StackPanel>
             </StackPanel>
 
-            <ListBox ItemsSource="{Binding Songs}" 
+            <ListBox ItemsSource="{Binding Songs}"
                      SelectedItem="{Binding SelectedSong, Mode=TwoWay}"
                      Background="Transparent" 
                      BorderThickness="0"
@@ -204,11 +205,14 @@
                             </TextBlock>
                             <StackPanel Grid.Column="1">
                                 <TextBlock Text="{Binding Title}" FontFamily="{ext:FontFamily SongDescriptionInfo_LB}" FontSize="{ext:FontSize SongDescriptionInfo_LB,14}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                                <StackPanel Orientation="Horizontal" Margin="0,3,0,0">
-                                    <TextBlock Text="{Binding Info}" FontFamily="{ext:FontFamily SongDescriptionInfo_LB}" FontSize="{ext:FontSize SongDescriptionInfo_LB,11}" Opacity="0.6" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock FontFamily="{ext:FontFamily SongDescriptionInfo_LB}" FontSize="{ext:FontSize SongDescriptionInfo_LB,11}" Opacity="0.6"/>
-                                    <TextBlock HorizontalAlignment="Right" TextAlignment="Right" Text="{Binding DurationSeconds, Converter={StaticResource TimeConv}}" FontFamily="{ext:FontFamily SongDescriptionInfo_LB}" FontSize="{ext:FontSize SongDescriptionInfo_LB,11}" Opacity="0.6"/>
-                                </StackPanel>
+                                <Grid Margin="0,3,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition/>
+                                        <ColumnDefinition/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding Info}" FontFamily="{ext:FontFamily SongDescriptionInfo_LB}" FontSize="{ext:FontSize SongDescriptionInfo_LB,11}" Opacity="0.6" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="1" HorizontalAlignment="Right" TextAlignment="Right" Text="{Binding DurationSeconds, Converter={StaticResource TimeConv}}" FontFamily="{ext:FontFamily SongDescriptionInfo_LB}" FontSize="{ext:FontSize SongDescriptionInfo_LB,11}" Opacity="0.6"/>
+                                </Grid>
                             </StackPanel>
                         </Grid>
                     </DataTemplate>
@@ -314,13 +318,14 @@
         </Grid>
 
         <!-- ================= Status Bar ================= -->
-        <Border Grid.Column="1" Grid.Row="1" 
+        <Border Grid.Column="1" Grid.Row="1" Grid.RowSpan="2"
                 Background="#181818" 
                 Padding="30,15"
                 BorderBrush="#282828"
                 BorderThickness="0,1,0,0">
             <Grid>
                 <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
@@ -358,11 +363,11 @@
 
                 <Grid Grid.Row="1">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1*"/>
                         <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1*"/>
                     </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="50,0,0,0">
                         <Button Content="⏪" Margin="5" FontSize="22"
                             Command="{Binding PlayPrevCommand}"
                             Style="{StaticResource SwitchSongBtnStyle}"
@@ -378,9 +383,13 @@
                             Style="{StaticResource SwitchSongBtnStyle}"
                             ToolTip="Next"
                             HorizontalAlignment="Center"/>
+                        <Slider
+                            Orientation="Horizontal" Height="20" Width="75" Margin="5"
+                            Value="{Binding SelectedSongVolume,UpdateSourceTrigger=PropertyChanged}"
+                            Style="{StaticResource VolumeSliderStyle}" Minimum="0" Maximum="100"/>
                     </StackPanel>
-                    
-                    <TextBlock Grid.Column="2" 
+                </Grid>
+                <TextBlock Grid.Row="2" 
                                Text="{Binding StatusText}" 
                                Foreground="#666666" 
                                FontSize="12"
@@ -388,7 +397,6 @@
                                HorizontalAlignment="Right"
                                TextTrimming="CharacterEllipsis"
                                ToolTip="{Binding StatusText}"/>
-                </Grid>
             </Grid>
         </Border>
     </Grid>
