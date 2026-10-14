@@ -48,7 +48,7 @@
                                
                            VerticalAlignment="Center"/>
 
-                    <Button Grid.Column="1"
+                    <!--<Button Grid.Column="1"
                         Width="30" 
                         Height="30" 
                         HorizontalAlignment="Right" 
@@ -57,7 +57,7 @@
                         Background="#FFF"
                         ToolTip="Свернуть плейлист">
                         <svg:SvgViewbox Source="./stats.svg"  Margin="4.5"/>
-                    </Button>
+                    </Button>-->
                 </Grid>
 
                 <StackPanel Orientation="Horizontal">
