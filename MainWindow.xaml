@@ -9,11 +9,6 @@
         MinHeight="620" MinWidth="830"
         Background="{StaticResource BgPrimary}">
 
-    
-    <Window.DataContext>
-        <vm:MainVM/>
-    </Window.DataContext>
-
 
     <WindowChrome.WindowChrome>
         <WindowChrome CaptionHeight="32"

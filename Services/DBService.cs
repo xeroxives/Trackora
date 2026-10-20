@@ -211,6 +211,29 @@ namespace WpfApp14.Services
                 return 100;
             }
         }
+        public int GetVol(string filehash)
+        {
+            if (!_isInitialized || string.IsNullOrEmpty(filehash))
+                return 100;
+
+            try
+            {
+                using var connection = new SqliteConnection(_connectionString);
+                connection.Open();
+
+                using var command = connection.CreateCommand();
+                command.CommandText = "SELECT Volume FROM Volumes WHERE FileHash = @hash;";
+                command.Parameters.AddWithValue("@hash", filehash);
+
+                var result = command.ExecuteScalar();
+                return result != null ? Convert.ToInt32(result) : 100;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"[VOLUME-DB] Failed to get volume: {ex.Message}");
+                return 100;
+            }
+        }
         #endregion
 
         #region Constructor

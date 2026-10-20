@@ -4,11 +4,13 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
 using WpfApp14.Converters;
+using WpfApp14.Interfaces;
 using WpfApp14.Models;
 using WpfApp14.Services;
 using WpfApp14.Utils;
@@ -22,6 +24,15 @@ public class MainVM : VM
     private MainPageVM _mainPageVM;
     private SettingsVM _settingsVM;
     //private StatsVM _StatsVM;
+    private readonly I_AudioService _audioService;
+    private readonly I_UITimer _uiTimer;
+    private readonly I_UiThread _uiThread;
+    private readonly I_PathProvider _pathProvider;
+    private readonly I_FilePicker _filePicker;
+    private readonly I_OsActions _osActions;
+    private readonly I_DialogService _dialogService;
+    private readonly I_FileHasher _fileHasher;
+    private readonly I_DbService _dbService;
     #endregion
 
     #region Getters
@@ -37,7 +48,16 @@ public class MainVM : VM
     {
         if (_mainPageVM == null)
         {
-            _mainPageVM = new MainPageVM();
+            _mainPageVM = new MainPageVM(
+                    _audioService,
+                    _uiTimer,
+                    _uiThread,
+                    _pathProvider,
+                    _filePicker,
+                    _osActions,
+                    _dialogService,
+                    _fileHasher,
+                    _dbService);
         }
         CurrentVM = _mainPageVM;
     }
@@ -69,8 +89,27 @@ public class MainVM : VM
 
     #region Constructor
 
-    public MainVM()
+    public MainVM(
+        I_AudioService audioService,
+        I_UITimer uiTimer,
+        I_UiThread uiThread,
+        I_PathProvider pathProvider,
+        I_FilePicker filePicker,
+        I_OsActions osActions,
+        I_DialogService dialogService,
+        I_FileHasher fileHasher,
+        I_DbService dbService)
     {
+        _audioService = audioService;
+        _uiTimer = uiTimer;
+        _uiThread = uiThread;
+        _pathProvider = pathProvider;
+        _filePicker = filePicker;
+        _osActions = osActions;
+        _dialogService = dialogService;
+        _fileHasher = fileHasher;
+        _dbService = dbService;
+
         Logger.Log($"\n\n==============================\nВерсия: {Environment.Version}");
 		Logger.Log($"Описание: {System.Runtime.InteropServices.RuntimeInformation.FrameworkDescription}\n==============================\n\n");
 

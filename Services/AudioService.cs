@@ -3,17 +3,17 @@ using System.IO;
 using System.Runtime.InteropServices;
 using WpfApp14.Utils;
 using Un4seen.Bass;
+using WpfApp14.Interfaces;
 
 namespace WpfApp14.Services
 {
-    public class AudioService : IDisposable
+    public class AudioService : I_AudioService
     {
         #region Privates
         private int _streamHandle = 0;
         private bool _isPlayingInternal = false;
         private static AudioService _instance;
-        private GCHandle _selfHandle;
-        private Un4seen.Bass.SYNCPROC _syncProcDelegate;
+        private SYNCPROC _syncProcDelegate;
 
         public event Action TrackEnded;
         public event Action<double> DurationUpdated;
@@ -99,16 +99,6 @@ namespace WpfApp14.Services
                 Bass.BASS_ChannelPause(_streamHandle);
                 _isPlayingInternal = false;
                 Logger.Log("Paused.");
-            }
-        }
-
-        public void Resume()
-        {
-            if (_streamHandle != 0 && !_isPlayingInternal)
-            {
-                Bass.BASS_ChannelPlay(_streamHandle, true);
-                _isPlayingInternal = true;
-                Logger.Log("Resumed.");
             }
         }
         public bool TryResume(double fromPositionSeconds = 0)

@@ -15,17 +15,25 @@ using WpfApp14.Views;
 using WpfApp14.Interfaces;
 using System.Windows;
 using System.Threading.Tasks.Sources;
+using System.Threading;
 
 namespace WpfApp14.ViewModels
 {
     public class MainPageVM : VM, I_PlayerVM
     {
         #region Privates
-        private AudioService _audioService = new();
+        private readonly I_AudioService _audioService;
+        private readonly I_UITimer _progressTimer;
+        private readonly I_UiThread _uiThread;
+        private readonly I_PathProvider _pathProvider;
+        private readonly I_FilePicker _filePicker;
+        private readonly I_OsActions _osActions;
+        private readonly I_DialogService _dialogService;
+        private readonly I_FileHasher _fileHasher;
+        private readonly I_DbService _DBdataService;
+
         private bool _isPlaying = false;
-        private DispatcherTimer _progressTimer;
         private readonly string _appDataFolder;
-        private bool _isSeeking = false;
         private bool _isUserSeeking = false;
         private bool _isUserSeekingFlag = false;
         private double _lastKnownPosition = 0;
@@ -34,7 +42,6 @@ namespace WpfApp14.ViewModels
         private int _tickCounter = 0;
         private bool _trackEndHandled = false;
         private DateTime _lastTickTime;
-        private DBService _DBdataService = new();
         private string _currentTrackHash;
         private double _currentTrackSeconds;
         private CancellationTokenSource _debounceCts;
@@ -102,7 +109,7 @@ namespace WpfApp14.ViewModels
 
                     if (!string.IsNullOrEmpty(value.FilePathOrUri))
                     {
-                        _currentTrackHash = FileHasher.ComputePartialHash(value.FilePathOrUri);
+                        _currentTrackHash = _fileHasher.ComputePartialHash(value.FilePathOrUri);
                         _lastTickTime = DateTime.UtcNow;
 
                         _audioService.Play(value.FilePathOrUri);
@@ -457,7 +464,7 @@ namespace WpfApp14.ViewModels
 
             try
             {
-                Process.Start("explorer.exe", $"/select,\"{pathToOpen}\"");
+                _osActions.ShowInExplorer(pathToOpen);
                 Logger.Log($"Opened location: {pathToOpen}");
             }
             catch (Exception ex)
@@ -471,11 +478,7 @@ namespace WpfApp14.ViewModels
             if (param is not Song song) return;
             //StatusText = $"Edit mode not implemented yet";
             Logger.Log($"Edit requested for: {song.CuttedTitle(10)}");
-            EditMetadataWindow ew = new EditMetadataWindow(SelectedSong);
-            if(ew.ShowDialog() == true)
-            {
-                Logger.Log("Edit sucessful");
-            }
+            _dialogService.ShowEditMetadataDialog(SelectedSong);
             Logger.Log($"Edit {song.CuttedTitle(10)} interrupted");
         }
         private void AddToQueue(object param)
@@ -490,6 +493,11 @@ namespace WpfApp14.ViewModels
         #region Funsc_Private
         private void OpenFileDialog()
         {
+            string path = _filePicker.PickAudioFile();
+            if (string.IsNullOrEmpty(path)) return;
+
+            string title = Path.GetFileNameWithoutExtension(path);
+
             var dialog = new Microsoft.Win32.OpenFileDialog
             {
                 Filter = "Audio Files|*.mp3;*.wav|All Files|*.*",
@@ -498,8 +506,6 @@ namespace WpfApp14.ViewModels
 
             if (dialog.ShowDialog() == true)
             {
-                string path = dialog.FileName;
-                string title = Path.GetFileNameWithoutExtension(path);
                 string artistName = "Unknown";
                 string genre = "N/A";
                 double duration = 0;
@@ -531,7 +537,7 @@ namespace WpfApp14.ViewModels
                     DurationSeconds = duration,
                     Info = $"Artist: {artistName}",
                     IsSavedToAppData = false,
-                    FileHash = FileHasher.ComputePartialHash(path)
+                    FileHash = _fileHasher.ComputePartialHash(path)
                 };
                 newSong.DefaultVolume = _DBdataService.GetVol(newSong);
                 newSong.ListenedSeconds = _DBdataService.GetListeningTime(newSong);
@@ -542,8 +548,7 @@ namespace WpfApp14.ViewModels
         }
         private void OpenUrlDialogAsync()
         {
-            UrlWindow w = new();
-            w.ShowDialog();
+            _dialogService.ShowUrlDialog();
             ReloadSongs("");
         }
         private void TogglePlayPause()
@@ -584,7 +589,7 @@ namespace WpfApp14.ViewModels
 
                 if (string.IsNullOrEmpty(_currentTrackHash))
                 {
-                    _currentTrackHash = FileHasher.ComputePartialHash(SelectedSong.FilePathOrUri);
+                    _currentTrackHash = _fileHasher.ComputePartialHash(SelectedSong.FilePathOrUri);
                 }
 
                 _isPlaying = true;
@@ -664,7 +669,7 @@ namespace WpfApp14.ViewModels
                         DurationSeconds = duration,
                         Info = $"Artist: {artistName}",
                         BackgroundImagePath = coverPath,
-                        FileHash = FileHasher.ComputePartialHash(filePath)
+                        FileHash = _fileHasher.ComputePartialHash(filePath)
                     };
                     song.DefaultVolume = _DBdataService.GetVol(song);
                     song.ListenedSeconds = _DBdataService.GetListeningTime(song);
@@ -745,7 +750,7 @@ namespace WpfApp14.ViewModels
             Logger.Log($"[LOOP] Playing prev track: {currentIndex} -> {nextIndex}");
             SelectedSong = Songs[nextIndex];
 
-            _currentTrackHash = FileHasher.ComputePartialHash(SelectedSong.FilePathOrUri);
+            _currentTrackHash = _fileHasher.ComputePartialHash(SelectedSong.FilePathOrUri);
             _lastTickTime = DateTime.UtcNow;
         }
         private void PlayNextTrack()
@@ -762,7 +767,7 @@ namespace WpfApp14.ViewModels
             Logger.Log($"[LOOP] Playing next track: {currentIndex} -> {nextIndex}");
             SelectedSong = Songs[nextIndex];
 
-            _currentTrackHash = FileHasher.ComputePartialHash(SelectedSong.FilePathOrUri);
+            _currentTrackHash = _fileHasher.ComputePartialHash(SelectedSong.FilePathOrUri);
             _lastTickTime = DateTime.UtcNow;
         }
         private void PlayRandomTrack()
@@ -776,7 +781,7 @@ namespace WpfApp14.ViewModels
             if (Songs.Count <= 1)
             {
                 SelectedSong = Songs[0];
-                _currentTrackHash = FileHasher.ComputePartialHash(SelectedSong.FilePathOrUri);
+                _currentTrackHash = _fileHasher.ComputePartialHash(SelectedSong.FilePathOrUri);
                 _lastTickTime = DateTime.UtcNow;
                 return;
             }
@@ -792,7 +797,7 @@ namespace WpfApp14.ViewModels
             Logger.Log($"[SHUFFLE] Playing random track: index {randomIndex}");
             SelectedSong = Songs[randomIndex];
 
-            _currentTrackHash = FileHasher.ComputePartialHash(SelectedSong.FilePathOrUri);
+            _currentTrackHash = _fileHasher.ComputePartialHash(SelectedSong.FilePathOrUri);
             _lastTickTime = DateTime.UtcNow;
         }
         #endregion
@@ -825,19 +830,36 @@ namespace WpfApp14.ViewModels
         #endregion
 
         #region Constructor
-        public MainPageVM()
+        public MainPageVM(
+            I_AudioService audioService,
+            I_UITimer progressTimer,
+            I_UiThread uiThread,
+            I_PathProvider pathProvider,
+            I_FilePicker filePicker,
+            I_OsActions osActions,
+            I_DialogService dialogService,
+            I_FileHasher fileHasher,
+            I_DbService dbService)
         {
-            _appDataFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Trackora");
+            _audioService = audioService;
+            _progressTimer = progressTimer;
+            _uiThread = uiThread;
+            _pathProvider = pathProvider;
+            _filePicker = filePicker;
+            _osActions = osActions;
+            _dialogService = dialogService;
+            _fileHasher = fileHasher;
+            _DBdataService = dbService;
+
+            _appDataFolder = pathProvider.AppDataFolder;
             if (!Directory.Exists(_appDataFolder))
                 Directory.CreateDirectory(_appDataFolder);
-
             if (!Directory.Exists(Path.Combine(_appDataFolder, "Songs")))
                 Directory.CreateDirectory(Path.Combine(_appDataFolder, "Songs"));
 
             PlayPauseCommand = new ButtonCommand(TogglePlayPause);
             PlayNextCommand = new ButtonCommand(PlayNextTrack);
             PlayPrevCommand = new ButtonCommand(PlayPrevTrack);
-
             ReloadSongsCommand = new ButtonCommand(ReloadSongs);
             OpenFileCommand = new ButtonCommand(OpenFileDialog);
             OpenUrlCommand = new ButtonCommand(OpenUrlDialogAsync);
@@ -849,13 +871,12 @@ namespace WpfApp14.ViewModels
             EditMetadataCommand = new ButtonCommand(EditMetadata);
             AddToQueueCommand = new ButtonCommand(AddToQueue);
 
-            _progressTimer = new DispatcherTimer();
             _progressTimer.Interval = TimeSpan.FromMilliseconds(25);
             _progressTimer.Tick += ProgressTimer_Tick;
 
             _audioService.TrackEnded += () =>
             {
-                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                _uiThread.Invoke(() =>
                 {
                     Logger.Log("[BASS] TrackEnded event received in VM.");
                     if (!_trackEndHandled)
@@ -867,9 +888,10 @@ namespace WpfApp14.ViewModels
                     }
                 });
             };
+
             _audioService.DurationUpdated += (seconds) =>
             {
-                System.Windows.Application.Current.Dispatcher.Invoke(() =>
+                _uiThread.Invoke(() =>
                 {
                     if (SelectedSong != null)
                     {
@@ -880,10 +902,9 @@ namespace WpfApp14.ViewModels
                     }
                 });
             };
-            
 
             LoadFromAppData();
-            Logger.Log("MainVM initialized with AudioService and Timer.");
+            Logger.Log("MainPageVM initialized with injected services.");
         }
         #endregion
     }
