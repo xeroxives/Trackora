@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace WpfApp14.ViewModels
+namespace Trackora.Core.ViewModels
 {
 	public abstract class VM : INotifyPropertyChanged
 	{

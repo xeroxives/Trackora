@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace WpfApp14.Models
+namespace Trackora.Core.Models
 {
     public class TrackStat
     {

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace WpfApp14.Interfaces
+namespace Trackora.Core.Interfaces
 {
     public interface I_UITimer
     {

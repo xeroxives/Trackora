@@ -2,10 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
-using WpfApp14.Models;
+using Trackora.Core.Models;
 
-namespace WpfApp14.Interfaces
+namespace Trackora.Core.Interfaces
 {
     public interface I_DbService
     {

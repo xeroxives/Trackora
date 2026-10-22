@@ -5,7 +5,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
-namespace WpfApp14.Models
+namespace Trackora.Core.Models
 {
     public class FontConfig
     {

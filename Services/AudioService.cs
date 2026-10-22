@@ -3,7 +3,8 @@ using System.IO;
 using System.Runtime.InteropServices;
 using WpfApp14.Utils;
 using Un4seen.Bass;
-using WpfApp14.Interfaces;
+using Trackora.Core.Interfaces;
+using Trackora.Core.Utils;
 
 namespace WpfApp14.Services
 {
@@ -217,15 +218,16 @@ namespace WpfApp14.Services
         #endregion
 
         #region Dispose
+        private bool _isDisposed = false;
         public void Dispose()
         {
+            if (_isDisposed) return;
+
             Stop();
-            if (_instance == this)
-            {
-                _instance = null;
-            }
+            if (_instance == this) _instance = null;
 
             Bass.BASS_Free();
+            _isDisposed = true;
             Logger.Log("AudioService disposed.");
         }
         #endregion

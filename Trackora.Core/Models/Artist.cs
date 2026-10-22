@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace WpfApp14.Models
+namespace Trackora.Core.Models
 {
 	public class Artist
 	{

@@ -1,16 +1,16 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <UseWPF>true</UseWPF>
-	<AssemblyName>Trackora</AssemblyName>
-    <AssemblyTitle>TrackoraMusic</AssemblyTitle>
-    <Platforms>AnyCPU;x64</Platforms>
-    <Configurations>Debug;Release;ReleaseMain</Configurations>
-  </PropertyGroup>
+    <PropertyGroup>
+		<DefaultItemExcludes>$(DefaultItemExcludes);Trackora.Core\**</DefaultItemExcludes>
+		<OutputType>WinExe</OutputType>
+        <TargetFramework>net8.0-windows</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <UseWPF>true</UseWPF>
+        <AssemblyName>Trackora</AssemblyName>
+        <AssemblyTitle>TrackoraMusic</AssemblyTitle>
+        <Platforms>AnyCPU;x64</Platforms>
+        <Configurations>Debug;Release</Configurations>
+    </PropertyGroup>
 
   <ItemGroup>
     <Compile Remove="Services\DialogService.cs" />
@@ -33,7 +33,7 @@
       <Generator></Generator>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-	<Content Include="Fonts\**\*">
+	<Content Include="Fonts\**\*" Exclude="bin\**;obj\**">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
@@ -68,7 +68,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.12" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.13" />
     <PackageReference Include="SharpVectors.Wpf" Version="1.8.6" />
     <PackageReference Include="System.Drawing.Common" Version="10.0.12" />
     <PackageReference Include="TagLibSharp" Version="2.3.0" />
@@ -84,5 +84,8 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Fonts\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="Trackora.Core\Trackora.Core.csproj" />
   </ItemGroup>
 </Project>

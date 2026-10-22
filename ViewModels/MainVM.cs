@@ -10,11 +10,13 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
 using WpfApp14.Converters;
-using WpfApp14.Interfaces;
-using WpfApp14.Models;
+using Trackora.Core.Interfaces;
+using Trackora.Core.Models;
 using WpfApp14.Services;
 using WpfApp14.Utils;
 using WpfApp14.Views;
+using Trackora.Core.ViewModels;
+using Trackora.Core.Utils;
 
 namespace WpfApp14.ViewModels;
 public class MainVM : VM

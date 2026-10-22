@@ -1,5 +1,5 @@
-﻿using WpfApp14.Interfaces;
-using WpfApp14.Models;
+﻿using Trackora.Core.Interfaces;
+using Trackora.Core.Models;
 using WpfApp14.Views;
 
 namespace WpfApp14.Services

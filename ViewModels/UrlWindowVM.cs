@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
+using Trackora.Core.ViewModels;
 using WpfApp14.Views;
 
 namespace WpfApp14.ViewModels

@@ -1,7 +1,7 @@
 ﻿using System;
-using WpfApp14.ViewModels;
+using Trackora.Core.ViewModels;
 
-namespace WpfApp14.Models
+namespace Trackora.Core.Models
 {
     public class Song : VM
     {

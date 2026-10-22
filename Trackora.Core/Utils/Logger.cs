@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 
-namespace WpfApp14.Utils
+namespace Trackora.Core.Utils
 {
 	public static class Logger
 	{

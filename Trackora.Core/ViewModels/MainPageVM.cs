@@ -1,23 +1,17 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
-using System.Windows.Threading;
-using WpfApp14.Models;
-using WpfApp14.Services;
-using WpfApp14.Utils;
-using WpfApp14.Views;
-using WpfApp14.Interfaces;
-using System.Windows;
-using System.Threading.Tasks.Sources;
+using Trackora.Core.Models;
+using Trackora.Core.Utils;
+using Trackora.Core.Interfaces;
 using System.Threading;
+using Microsoft.Win32;
 
-namespace WpfApp14.ViewModels
+namespace Trackora.Core.ViewModels
 {
     public class MainPageVM : VM, I_PlayerVM
     {
@@ -497,54 +491,45 @@ namespace WpfApp14.ViewModels
             if (string.IsNullOrEmpty(path)) return;
 
             string title = Path.GetFileNameWithoutExtension(path);
+            string artistName = "Unknown";
+            string genre = "N/A";
+            double duration = 0;
 
-            var dialog = new Microsoft.Win32.OpenFileDialog
+            try
             {
-                Filter = "Audio Files|*.mp3;*.wav|All Files|*.*",
-                Title = "Select Music File"
+                using var file = TagLib.File.Create(path);
+                if (!string.IsNullOrEmpty(file.Tag.Title))
+                    title = file.Tag.Title;
+
+                if (file.Tag.Performers.Length > 0)
+                    artistName = file.Tag.Performers[0];
+
+                if (file.Tag.Genres.Length > 0 && !string.IsNullOrEmpty(file.Tag.Genres[0]))
+                    genre = file.Tag.Genres[0];
+
+                duration = file.Properties.Duration.TotalSeconds;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Tag parse failed for {path}: {ex.Message}. Using filename.");
+            }
+            var newSong = new Song
+            {
+                Id = Songs.Count + 1,
+                Title = title,
+                FilePathOrUri = path,
+                Genre = genre,
+                DurationSeconds = duration,
+                Info = $"Artist: {artistName}",
+                IsSavedToAppData = false,
+                FileHash = _fileHasher.ComputePartialHash(path)
             };
 
-            if (dialog.ShowDialog() == true)
-            {
-                string artistName = "Unknown";
-                string genre = "N/A";
-                double duration = 0;
-
-                try
-                {
-                    using var file = TagLib.File.Create(path);
-                    if (!string.IsNullOrEmpty(file.Tag.Title))
-                        title = file.Tag.Title;
-
-                    if (file.Tag.Performers.Length > 0)
-                        artistName = file.Tag.Performers[0];
-
-                    if (file.Tag.Genres.Length > 0 && !string.IsNullOrEmpty(file.Tag.Genres[0]))
-                        genre = file.Tag.Genres[0];
-                    duration = file.Properties.Duration.TotalSeconds;
-                }
-                catch (Exception ex)
-                {
-                    Logger.Error($"Tag parse failed for {path}: {ex.Message}. Using filename.");
-                }
-
-                var newSong = new Song
-                {
-                    Id = Songs.Count + 1,
-                    Title = title,
-                    FilePathOrUri = path,
-                    Genre = genre,
-                    DurationSeconds = duration,
-                    Info = $"Artist: {artistName}",
-                    IsSavedToAppData = false,
-                    FileHash = _fileHasher.ComputePartialHash(path)
-                };
-                newSong.DefaultVolume = _DBdataService.GetVol(newSong);
-                newSong.ListenedSeconds = _DBdataService.GetListeningTime(newSong);
-                Songs.Add(newSong);
-                _lastKnownPosition = 0;
-                SelectedSong = newSong;
-            }
+            newSong.DefaultVolume = _DBdataService.GetVol(newSong);
+            newSong.ListenedSeconds = _DBdataService.GetListeningTime(newSong);
+            Songs.Add(newSong);
+            _lastKnownPosition = 0;
+            SelectedSong = newSong;
         }
         private void OpenUrlDialogAsync()
         {

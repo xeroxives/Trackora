@@ -1,7 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
-using WpfApp14.Interfaces;
-using WpfApp14.Models;
+using Trackora.Core.Interfaces;
+using Trackora.Core.Models;
 
 namespace WpfApp14.Services
 {

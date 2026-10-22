@@ -4,10 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace WpfApp14.Interfaces
+namespace Trackora.Core.Interfaces
 {
-    public interface I_PathProvider
+    public interface I_FileHasher
     {
-        string AppDataFolder { get; }
+        string ComputePartialHash(string filePath);
     }
 }

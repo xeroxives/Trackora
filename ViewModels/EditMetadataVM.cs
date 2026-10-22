@@ -4,7 +4,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using WpfApp14.Models;
+using Trackora.Core.Models;
+using Trackora.Core.ViewModels;
 
 namespace WpfApp14.ViewModels
 {

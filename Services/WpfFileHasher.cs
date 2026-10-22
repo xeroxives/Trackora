@@ -1,4 +1,4 @@
-﻿using WpfApp14.Interfaces;
+﻿using Trackora.Core.Interfaces;
 using WpfApp14.Utils;
 
 namespace WpfApp14.Services

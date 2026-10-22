@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using WpfApp14.Interfaces;
+using Trackora.Core.Interfaces;
+using Trackora.Core.ViewModels;
 
 namespace WpfApp14.ViewModels
 {

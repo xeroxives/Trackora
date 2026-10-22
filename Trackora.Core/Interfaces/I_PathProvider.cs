@@ -4,10 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace WpfApp14.Interfaces
+namespace Trackora.Core.Interfaces
 {
-    public interface I_FilePicker
+    public interface I_PathProvider
     {
-        string PickAudioFile();
+        string AppDataFolder { get; }
     }
 }

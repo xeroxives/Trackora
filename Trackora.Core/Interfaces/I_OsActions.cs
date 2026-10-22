@@ -4,11 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace WpfApp14.Interfaces
+namespace Trackora.Core.Interfaces
 {
-    public interface I_PlayerVM
+    public interface I_OsActions
     {
-        void SeekTo(double seconds);
-        void Cleanup();
+        void ShowInExplorer(string filePath);
     }
 }
+

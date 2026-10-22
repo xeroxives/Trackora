@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Windows;
-using WpfApp14.Interfaces;
+using Trackora.Core.Interfaces;
 
 namespace WpfApp14.Services
 {

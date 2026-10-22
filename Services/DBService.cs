@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using Microsoft.Data.Sqlite;
 using System.IO;
 using System.Threading.Tasks;
-using WpfApp14.Models;
+using Trackora.Core.Models;
 using System.Diagnostics;
 using WpfApp14.Utils;
+using Trackora.Core.Utils;
 
 namespace WpfApp14.Services
 {

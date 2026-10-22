@@ -6,12 +6,14 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
-using WpfApp14.Interfaces;
+using Trackora.Core.Interfaces;
 using WpfApp14.Services;
 using WpfApp14.ViewModels;
+using Trackora.Core.ViewModels;
 using SharpVectors.Runtime;
 using SharpVectors.Converters;
 using WpfApp14.Utils;
+using Trackora.Core.Utils;
 
 namespace WpfApp14
 {
