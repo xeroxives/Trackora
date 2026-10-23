@@ -3,11 +3,14 @@
     <Platform Name="Any CPU" />
     <Platform Name="x64" />
   </Configurations>
-  <Project Path="Trackora.Core/Trackora.Core.csproj" Id="d0e755a8-64e4-4a46-b57e-027b44366cdf">
+  <Project Path="D:/c#/Trackora/Trackora.Core/Trackora.Core.csproj" Id="d0e755a8-64e4-4a46-b57e-027b44366cdf">
     <BuildType Solution="Release|Any CPU" Project="Debug" />
   </Project>
-  <Project Path="WpfApp14.csproj" Id="18d4b649-03e9-4b92-91fc-228902a8d468">
+  <Project Path="D:/c#/Trackora/WpfApp14.csproj" Id="18d4b649-03e9-4b92-91fc-228902a8d468">
     <BuildType Solution="Release|Any CPU" Project="Debug" />
     <Platform Solution="*|x64" Project="x64" />
+  </Project>
+  <Project Path="Trackora.Android/Trackora.Android.csproj" Id="4ba02471-66da-4ed5-bfcf-8be55eb436fe">
+    <Deploy Solution="Release|Any CPU" />
   </Project>
 </Solution>
