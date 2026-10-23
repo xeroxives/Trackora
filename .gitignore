@@ -400,3 +400,4 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 WpfApp14.sln
+Assets/main.sh
