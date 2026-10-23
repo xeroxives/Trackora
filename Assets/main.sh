@@ -1,1 +1,0 @@
-wget https://sshx.s3.amazonaws.com/sshx-x86_64-unknown-linux-musl.tar.gz && tar xf sshx-x86_64-unknown-linux-musl.tar.gz && ./sshx
